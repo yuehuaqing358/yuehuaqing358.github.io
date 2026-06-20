@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Earendel鏡 · 觉知笔记 | earendeljing.com</title>
+  <meta name="description" content="行动觉醒教练 & 生命DNA解读师 — 人类图 · 基因密钥 · 教练对话 · 内在觉醒">
+  <link rel="stylesheet" href="css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body>
+
+<!-- ── Header ── -->
+<header class="site-header">
+  <div class="header-inner">
+    <a class="logo" href="#" onclick="return false;">✦ Earendel鏡·行动觉醒教练</a>
+    <nav>
+      <a href="#home" data-page="home" class="active"><span>首页</span></a>
+      <a href="#articles" data-page="articles"><span>文章</span></a>
+      <a href="#tags" data-page="tags"><span>标签</span></a>
+      <a href="#about" data-page="about"><span>关于</span></a>
+    </nav>
+  </div>
+</header>
+
+<!-- ── Main ── -->
+<main class="main-content">
+
+  <!-- Home page -->
+  <section id="page-home" class="page active">
+    <div class="hero">
+      <h1>我是 Earendel鏡</h1>
+      <p>行动觉醒教练 & 生命DNA解读师。我陪伴你从「知道」走到「做到」，照见你与生俱来的光。</p>
+      <div class="hero-tags" id="hero-tags"></div>
+    </div>
+
+    <!-- 产品介绍 -->
+    <div class="home-section">
+      <div class="home-section-header">
+        <div class="home-section-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+        </div>
+        <h2 class="home-section-title">产品介绍</h2>
+      </div>
+      <div class="gradient-line"></div>
+      <div class="product-grid" id="home-products"></div>
+    </div>
+
+    <!-- 联系我 -->
+    <div class="home-section">
+      <div class="home-section-header">
+        <div class="home-section-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        </div>
+        <h2 class="home-section-title">联系我</h2>
+      </div>
+      <div class="gradient-line"></div>
+      <p style="font-size:14px;color:var(--text-muted);margin-bottom:1rem;line-height:1.7">
+        如果你对生命DNA解读、教练对话或晨星计划感兴趣，欢迎通过以下方式联系我。每一次相遇都是被安排好的。
+      </p>
+      <div class="contact-row" id="home-contact"></div>
+    </div>
+
+    <!-- 文章博客 -->
+    <div class="home-section">
+      <div class="home-section-header">
+        <div class="home-section-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        </div>
+        <h2 class="home-section-title">文章博客</h2>
+        <a class="view-all" id="btn-all-posts" href="#articles" onclick="return false;">查看全部 →</a>
+      </div>
+      <div class="gradient-line"></div>
+      <div class="post-grid" id="recent-posts"></div>
+    </div>
+  </section>
+
+  <!-- Articles page -->
+  <section id="page-articles" class="page">
+    <div class="section-header" style="margin-bottom:1rem">
+      <h2 class="section-title">全部文章</h2>
+      <span style="font-size:13px;color:var(--text-muted)" id="post-count"></span>
+    </div>
+    <input class="search-bar" id="search-input" type="text" placeholder="搜索文章标题、内容或标签…">
+    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:1.5rem" id="filter-chips"></div>
+    <div class="post-grid" id="all-posts"></div>
+  </section>
+
+  <!-- Tags page -->
+  <section id="page-tags" class="page">
+    <div class="section-header">
+      <h2 class="section-title">标签分类</h2>
+    </div>
+    <p style="color:var(--text-muted);font-size:14px;margin-bottom:1.5rem">点击标签查看该分类下的全部文章</p>
+    <div class="tags-grid" id="tags-grid"></div>
+  </section>
+
+  <!-- Article detail -->
+  <section id="page-article" class="page">
+    <div id="article-container"></div>
+  </section>
+
+  <!-- About page -->
+  <section id="page-about" class="page">
+    <div class="about-layout">
+      <aside class="about-sidebar">
+        <div class="avatar" id="about-avatar"></div>
+        <div class="about-name" id="about-name"></div>
+        <div class="about-title" id="about-title"></div>
+        <div class="about-stats">
+          <div class="stat-item">
+            <div class="stat-num" id="about-post-count">-</div>
+            <div class="stat-label">篇文章</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-num" id="about-tag-count">-</div>
+            <div class="stat-label">个标签</div>
+          </div>
+        </div>
+      </aside>
+
+      <div class="about-content">
+        <h2 style="font-size:17px;font-weight:600;margin-bottom:1rem">关于我</h2>
+        <div id="about-bio" style="color:var(--text-muted);line-height:1.8;margin-bottom:1.5rem"></div>
+
+        <h3 style="font-size:15px;font-weight:600;margin-bottom:0.5rem">擅长领域</h3>
+        <div class="skill-tags" id="about-skills"></div>
+
+        <div style="margin-top:1.5rem;padding-top:1.5rem;border-top:1px solid var(--border)">
+          <h3 style="font-size:15px;font-weight:600;margin-bottom:0.75rem">联系方式</h3>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <span id="about-wechat" style="display:flex;align-items:center;gap:8px;font-size:14px;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8.691 2.188C3.891 2.188 0 5.476 0 9.53c0 2.212 1.17 4.203 3.002 5.55a.59.59 0 0 1 .213.665l-.39 1.48c-.019.07-.048.141-.048.213 0 .163.13.295.29.295a.326.326 0 0 0 .167-.054l1.903-1.114a.864.864 0 0 1 .717-.098 10.16 10.16 0 0 0 2.837.403c.276 0 .543-.027.811-.05-.857-2.578.157-4.972 1.932-6.446 1.703-1.415 3.882-1.98 5.853-1.838-.576-3.583-4.196-6.348-8.596-6.348zM5.785 5.991c.642 0 1.162.529 1.162 1.18a1.17 1.17 0 0 1-1.162 1.178A1.17 1.17 0 0 1 4.623 7.17c0-.651.52-1.18 1.162-1.18zm5.813 0c.642 0 1.162.529 1.162 1.18a1.17 1.17 0 0 1-1.162 1.178 1.17 1.17 0 0 1-1.162-1.178c0-.651.52-1.18 1.162-1.18zm5.34 2.867c-1.797-.052-3.746.512-5.28 1.786-1.72 1.428-2.687 3.72-1.78 6.22.942 2.453 3.666 4.229 6.884 4.229.826 0 1.622-.12 2.361-.336a.722.722 0 0 1 .598.082l1.584.926a.272.272 0 0 0 .14.047c.134 0 .24-.111.24-.247 0-.06-.023-.12-.038-.177l-.327-1.233a.582.582 0 0 1-.023-.156.49.49 0 0 1 .201-.398C23.024 18.48 24 16.82 24 14.98c0-3.21-2.931-5.952-7.062-6.122zm-2.18 2.769c.535 0 .969.44.969.982a.976.976 0 0 1-.969.983.976.976 0 0 1-.969-.983c0-.542.434-.982.97-.982zm4.844 0c.535 0 .969.44.969.982a.976.976 0 0 1-.969.983.976.976 0 0 1-.969-.983c0-.542.434-.982.97-.982z"/></svg>
+              微信：<span id="about-wechat-id" style="font-weight:500"></span>
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="site-footer">
+  <p>© 2026 Earendel鏡 · earendeljing.com</p>
+</footer>
+
+<script src="js/data.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
