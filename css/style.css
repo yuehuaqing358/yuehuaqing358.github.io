@@ -5,18 +5,18 @@
 }
 
 :root {
-  --primary: #6366f1;
-  --primary-deep: #4f46e5;
-  --primary-light: #eef2ff;
-  --primary-gradient: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a855f7 100%);
-  --text: #1e1b4b;
-  --text-muted: #6b7280;
-  --border: #e5e7eb;
-  --bg: #f8f7ff;
+  --primary: #3b82f6;
+  --primary-deep: #2563eb;
+  --primary-light: #eff6ff;
+  --primary-gradient: linear-gradient(135deg, #3b82f6 0%, #14b8a6 50%, #ec4899 100%);
+  --text: #1e293b;
+  --text-muted: #64748b;
+  --border: #e2e8f0;
+  --bg: #f8fafc;
   --white: #ffffff;
-  --code-bg: #f3f4f6;
-  --tag-bg: #ede9fe;
-  --tag-color: #6d28d9;
+  --code-bg: #f1f5f9;
+  --tag-bg: #e0f2fe;
+  --tag-color: #0369a1;
   --radius: 8px;
   --radius-lg: 12px;
   --shadow: 0 1px 3px rgba(0,0,0,0.08);
@@ -57,7 +57,7 @@ a:hover { text-decoration: underline; }
 }
 
 .logo {
-  font-size: 18px;
+  font-size: 14px;
   font-weight: 600;
   background: var(--primary-gradient);
   -webkit-background-clip: text;
@@ -161,7 +161,7 @@ nav a:hover, nav a.active {
 
 .post-card:hover {
   border-color: var(--primary);
-  box-shadow: 0 4px 20px rgba(99, 102, 241, 0.15);
+  box-shadow: 0 4px 20px rgba(59, 130, 246, 0.15);
 }
 
 /* ── Gradient separator ── */
@@ -226,7 +226,7 @@ nav a:hover, nav a.active {
 .product-card:hover {
   border-color: var(--primary);
   transform: translateY(-2px);
-  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.12);
+  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.12);
 }
 
 .product-card h4 {
@@ -464,7 +464,7 @@ nav a:hover, nav a.active {
 }
 
 .md-content pre {
-  background: #1e1b4b;
+  background: #1e293b;
   border-radius: var(--radius);
   padding: 1.25rem;
   overflow-x: auto;
@@ -474,7 +474,7 @@ nav a:hover, nav a.active {
 .md-content pre code {
   background: none;
   padding: 0;
-  color: #c4c9ff;
+  color: #93c5fd;
   font-size: 0.85em;
 }
 

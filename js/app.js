@@ -64,7 +64,7 @@
   function renderHome() {
     const recent = POSTS.slice(0, 4);
     const tags = getAllTags();
-    const topTags = Object.keys(tags).slice(0, 6);
+    const topTags = Object.keys(tags).filter(t => t !== '晨星计划').slice(0, 6);
 
     $('#hero-tags').innerHTML = topTags.map(t => renderTag(t)).join('');
     $('#recent-posts').innerHTML = recent.map(renderPostCard).join('');
