@@ -5,6 +5,27 @@
   const $ = (sel, ctx = document) => ctx.querySelector(sel);
   const $$ = (sel, ctx = document) => [...ctx.querySelectorAll(sel)];
 
+  // Safe markdown parser — never crashes even if CDN is blocked
+  function parseMarkdown(md) {
+    if (typeof marked !== 'undefined' && marked.parse) {
+      try { return marked.parse(md.trim()); } catch (e) {}
+    }
+    // Plain-text fallback
+    return md.trim()
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .split('\n\n').map(block => {
+        const trimmed = block.trim();
+        if (/^#{2,3}\s/.test(trimmed)) return `<h3 style="margin-top:1.5em">${trimmed.replace(/^#{2,3}\s*/, '')}</h3>`;
+        if (/^#{1}\s/.test(trimmed)) return `<h2 style="margin-top:1.5em">${trimmed.replace(/^#\s*/, '')}</h2>`;
+        if (trimmed.startsWith('---')) return '<hr>';
+        if (trimmed.startsWith('- ') || trimmed.startsWith('* '))
+          return '<ul>' + trimmed.split('\n').map(l => `<li>${l.replace(/^[-*]\s*/, '')}</li>`).join('') + '</ul>';
+        if (/^\d+\.\s/.test(trimmed))
+          return '<ol>' + trimmed.split('\n').map(l => `<li>${l.replace(/^\d+\.\s*/, '')}</li>`).join('') + '</ol>';
+        return '<p>' + trimmed.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>') + '</p>';
+      }).join('\n');
+  }
+
   function formatDate(str) {
     const d = new Date(str);
     return d.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' });
@@ -78,9 +99,13 @@
       </div>
     `).join('');
     
-    // Bind product card clicks
-    $$('.product-card', $('#home-products')).forEach(card => {
-      card.addEventListener('click', () => openService(card.dataset.service));
+    // Bind product card clicks via event delegation (most reliable)
+    $('#home-products').addEventListener('click', (e) => {
+      const card = e.target.closest('.product-card');
+      if (card) {
+        e.preventDefault();
+        openService(card.dataset.service);
+      }
     });
 
     // Contact
@@ -184,7 +209,7 @@
     const post = POSTS.find(p => p.id === id);
     if (!post) return;
 
-    const html = marked.parse(post.content.trim());
+    const html = parseMarkdown(post.content);
     const toc = buildTOC(post.content);
 
     $('#article-container').innerHTML = `
@@ -219,7 +244,7 @@
     const service = PRODUCTS.find(p => p.id === id);
     if (!service) return;
 
-    const html = marked.parse(service.content.trim());
+    const html = parseMarkdown(service.content);
 
     $('#service-container').innerHTML = `
       <button class="back-btn" id="btn-service-back">← 返回首页</button>
