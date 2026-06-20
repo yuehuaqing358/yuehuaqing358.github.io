@@ -221,6 +221,7 @@ nav a:hover, nav a.active {
   border-radius: var(--radius-lg);
   padding: 1.25rem;
   transition: all 0.2s;
+  cursor: pointer;
 }
 
 .product-card:hover {

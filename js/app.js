@@ -69,14 +69,19 @@
     $('#hero-tags').innerHTML = topTags.map(t => renderTag(t)).join('');
     $('#recent-posts').innerHTML = recent.map(renderPostCard).join('');
 
-    // Products
+    // Products → clickable cards
     $('#home-products').innerHTML = PRODUCTS.map(p => `
-      <div class="product-card">
+      <div class="product-card" data-service="${p.id}">
         <h4>${p.name}</h4>
         <p>${p.desc}</p>
-        <span class="product-price">${p.price}</span>
+        <span style="font-size:12px;color:var(--primary);margin-top:0.5rem;display:inline-block">了解详情 →</span>
       </div>
     `).join('');
+    
+    // Bind product card clicks
+    $$('.product-card', $('#home-products')).forEach(card => {
+      card.addEventListener('click', () => openService(card.dataset.service));
+    });
 
     // Contact
     $('#home-contact').innerHTML = `
@@ -209,6 +214,26 @@
     navigate('article');
   }
 
+  /* ── Service detail ── */
+  function openService(id) {
+    const service = PRODUCTS.find(p => p.id === id);
+    if (!service) return;
+
+    const html = marked.parse(service.content.trim());
+
+    $('#service-container').innerHTML = `
+      <button class="back-btn" id="btn-service-back">← 返回首页</button>
+      <div class="article-header">
+        <h1 class="article-title">${service.name}</h1>
+      </div>
+      <div class="md-content">${html}</div>
+    `;
+
+    $('#btn-service-back').addEventListener('click', () => navigate('home'));
+
+    navigate('service');
+  }
+
   function buildTOC(md) {
     const headings = [];
     const lines = md.split('\n');
@@ -290,7 +315,7 @@
 
     // Initial route
     const hash = location.hash.replace('#', '') || 'home';
-    showPage(['home', 'articles', 'tags', 'about'].includes(hash) ? hash : 'home');
+    showPage(['home', 'articles', 'tags', 'about', 'service', 'article'].includes(hash) ? hash : 'home');
   }
 
   document.addEventListener('DOMContentLoaded', init);
