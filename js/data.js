@@ -130,7 +130,8 @@ const PRODUCTS = [
 
 const CONTACT = {
   wechat: "Yue_HuaQing",
-  intro: "添加时请备注「觉醒」或「DNA」"
+  official_account: "Earendel鏡",
+  intro: "添加时备注「行动觉醒」或「教练计划」"
 };
 
 window.BLOG_DATA = { POSTS, ABOUT, PRODUCTS, CONTACT };
