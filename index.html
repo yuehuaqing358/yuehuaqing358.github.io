@@ -104,16 +104,38 @@
     </div>
   </div>
 
-  <!-- ══ 隐藏页面 ══ -->
+  <!-- ══ 隐藏页面（专属空间·便签本） ══ -->
   <section id="page-secret" class="page">
     <div class="secret-header">
       <button class="secret-back" id="secret-back">← 返回</button>
       <h2 class="page-title">专属空间</h2>
-      <button class="secret-edit-btn" id="secret-edit-btn">编辑</button>
+      <span class="secret-header-spacer"></span>
     </div>
     <div class="gradient-line"></div>
-    <div id="secret-content" class="secret-content-card">
-      加载中…
+
+    <!-- 便签列表视图 -->
+    <div id="secret-notes-view">
+      <div class="notes-grid" id="notes-grid">
+        <div class="note-card note-card--add" id="note-add-btn">
+          <div class="note-card-add-icon">＋</div>
+          <div class="note-card-add-text">新建便签</div>
+        </div>
+      </div>
+      <div class="notes-empty" id="notes-empty">还没有便签，点击「＋」新建一张吧</div>
+    </div>
+
+    <!-- 便签编辑视图 -->
+    <div id="secret-note-edit" style="display:none">
+      <div class="note-edit-header">
+        <button class="note-edit-back" id="note-edit-back">← 返回</button>
+        <input class="note-title-input" id="note-title-input" type="text" placeholder="便签标题">
+        <div class="note-edit-actions">
+          <button class="secret-cancel-btn" id="note-delete-btn">删除</button>
+          <button class="secret-save-btn" id="note-save-btn">保存</button>
+        </div>
+      </div>
+      <div class="note-edit-date" id="note-edit-date"></div>
+      <textarea class="note-content-input" id="note-content-input" placeholder="在这里写内容…"></textarea>
     </div>
   </section>
 
