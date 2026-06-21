@@ -112,10 +112,23 @@
       <button class="secret-edit-btn" id="secret-edit-btn">编辑</button>
     </div>
     <div class="gradient-line"></div>
-    <div id="secret-content" class="secret-content">
-      <p style="color:var(--text-muted);font-size:14px">加载中…</p>
+    <div id="secret-content" class="secret-content-card">
+      加载中…
     </div>
   </section>
+
+  <!-- ══ Token 弹窗（保存专属空间内容时用） ══ -->
+  <div class="token-overlay" id="token-overlay">
+    <div class="token-box">
+      <div class="token-icon">🔑</div>
+      <div class="token-title">需要 GitHub Token</div>
+      <div class="token-desc">首次保存需要输入 GitHub Token<br>（仅存储在浏览器本地，不会上传）</div>
+      <input class="token-input" id="token-input" type="text" placeholder="ghp_xxxxxxxxxx" autocomplete="off">
+      <div class="pwd-error" id="token-error">Token 格式不正确，请以 ghp_ 开头</div>
+      <button class="token-btn" id="token-btn">确认</button>
+      <button class="token-cancel" id="token-cancel">取消</button>
+    </div>
+  </div>
 
 </main>
 
