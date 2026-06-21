@@ -97,12 +97,13 @@
       });
     });
 
-    $$('.home-service-row').forEach(function(item) {
-      item.addEventListener('click', function(e) {
+    var homeServicesCard = $('.home-services-card');
+    if (homeServicesCard) {
+      homeServicesCard.addEventListener('click', function(e) {
         e.preventDefault();
-        navigate(item.getAttribute('data-page'));
+        navigate(homeServicesCard.getAttribute('data-page'));
       });
-    });
+    }
 
   }
 
