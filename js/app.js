@@ -60,6 +60,9 @@
   /* ── Router ── */
   let currentPage = 'home';
 
+  // 有效页面列表（已移除 articles 导航项，但保留内部跳转）
+  const VALID_PAGES = ['home', 'articles', 'tags', 'about', 'service', 'article'];
+
   function showPage(name) {
     $$('.page').forEach(p => p.classList.remove('active'));
     const el = $(`#page-${name}`);
@@ -88,7 +91,9 @@
     const topTags = Object.keys(tags).filter(t => t !== '晨星计划').slice(0, 6);
 
     $('#hero-tags').innerHTML = topTags.map(t => renderTag(t)).join('');
-    $('#recent-posts').innerHTML = recent.map(renderPostCard).join('');
+    $('#recent-posts').innerHTML = recent.length
+      ? recent.map(renderPostCard).join('')
+      : `<div class="empty" style="padding:2rem 0;font-size:14px;color:var(--text-muted)">暂无文章，敬请期待…</div>`;
 
     // Products → clickable cards
     $('#home-products').innerHTML = PRODUCTS.map(p => `
@@ -98,8 +103,8 @@
         <span style="font-size:12px;color:var(--primary);margin-top:0.5rem;display:inline-block">了解详情 →</span>
       </div>
     `).join('');
-    
-    // Bind product card clicks via event delegation (most reliable)
+
+    // Bind product card clicks via event delegation
     $('#home-products').addEventListener('click', (e) => {
       const card = e.target.closest('.product-card');
       if (card) {
@@ -108,29 +113,50 @@
       }
     });
 
-    // Contact
+    // 联系我 — 全新排版，含个人介绍
+    const bioShort = ABOUT.bio.split('\n\n')[0]; // 取第一段作为简介
     $('#home-contact').innerHTML = `
-      <div class="contact-cards">
-        <div class="contact-card">
-          <span class="contact-card-icon wechat-icon">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M8.691 2.188C3.891 2.188 0 5.476 0 9.53c0 2.212 1.17 4.203 3.002 5.55a.59.59 0 0 1 .213.665l-.39 1.48c-.019.07-.048.141-.048.213 0 .163.13.295.29.295a.326.326 0 0 0 .167-.054l1.903-1.114a.864.864 0 0 1 .717-.098 10.16 10.16 0 0 0 2.837.403c.276 0 .543-.027.811-.05-.857-2.578.157-4.972 1.932-6.446 1.703-1.415 3.882-1.98 5.853-1.838-.576-3.583-4.196-6.348-8.596-6.348zM5.785 5.991c.642 0 1.162.529 1.162 1.18a1.17 1.17 0 0 1-1.162 1.178A1.17 1.17 0 0 1 4.623 7.17c0-.651.52-1.18 1.162-1.18zm5.813 0c.642 0 1.162.529 1.162 1.18a1.17 1.17 0 0 1-1.162 1.178 1.17 1.17 0 0 1-1.162-1.178c0-.651.52-1.18 1.162-1.18zm5.34 2.867c-1.797-.052-3.746.512-5.28 1.786-1.72 1.428-2.687 3.72-1.78 6.22.942 2.453 3.666 4.229 6.884 4.229.826 0 1.622-.12 2.361-.336a.722.722 0 0 1 .598.082l1.584.926a.272.272 0 0 0 .14.047c.134 0 .24-.111.24-.247 0-.06-.023-.12-.038-.177l-.327-1.233a.582.582 0 0 1-.023-.156.49.49 0 0 1 .201-.398C23.024 18.48 24 16.82 24 14.98c0-3.21-2.931-5.952-7.062-6.122zm-2.18 2.769c.535 0 .969.44.969.982a.976.976 0 0 1-.969.983.976.976 0 0 1-.969-.983c0-.542.434-.982.97-.982zm4.844 0c.535 0 .969.44.969.982a.976.976 0 0 1-.969.983.976.976 0 0 1-.969-.983c0-.542.434-.982.97-.982z"/></svg>
-          </span>
-          <div class="contact-card-body">
-            <span class="contact-card-label">微信</span>
-            <span class="contact-card-value">${CONTACT.wechat}</span>
+      <div class="contact-section">
+
+        <!-- 个人介绍卡 -->
+        <div class="contact-bio-block">
+          <div class="contact-bio-avatar">${ABOUT.name[0]}</div>
+          <div class="contact-bio-text">
+            <div class="contact-bio-name">${ABOUT.name}</div>
+            <div class="contact-bio-role">${ABOUT.title}</div>
+            <div class="contact-bio-desc">${bioShort}</div>
           </div>
         </div>
-        <div class="contact-card">
-          <span class="contact-card-icon oa-icon">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12h8M12 8l4 4-4 4"/></svg>
-          </span>
-          <div class="contact-card-body">
-            <span class="contact-card-label">公众号</span>
-            <span class="contact-card-value">${CONTACT.official_account}</span>
+
+        <!-- 联系方式卡片 -->
+        <div class="contact-cards">
+          <div class="contact-card">
+            <span class="contact-card-icon wechat-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M8.691 2.188C3.891 2.188 0 5.476 0 9.53c0 2.212 1.17 4.203 3.002 5.55a.59.59 0 0 1 .213.665l-.39 1.48c-.019.07-.048.141-.048.213 0 .163.13.295.29.295a.326.326 0 0 0 .167-.054l1.903-1.114a.864.864 0 0 1 .717-.098 10.16 10.16 0 0 0 2.837.403c.276 0 .543-.027.811-.05-.857-2.578.157-4.972 1.932-6.446 1.703-1.415 3.882-1.98 5.853-1.838-.576-3.583-4.196-6.348-8.596-6.348zM5.785 5.991c.642 0 1.162.529 1.162 1.18a1.17 1.17 0 0 1-1.162 1.178A1.17 1.17 0 0 1 4.623 7.17c0-.651.52-1.18 1.162-1.18zm5.813 0c.642 0 1.162.529 1.162 1.18a1.17 1.17 0 0 1-1.162 1.178 1.17 1.17 0 0 1-1.162-1.178c0-.651.52-1.18 1.162-1.18zm5.34 2.867c-1.797-.052-3.746.512-5.28 1.786-1.72 1.428-2.687 3.72-1.78 6.22.942 2.453 3.666 4.229 6.884 4.229.826 0 1.622-.12 2.361-.336a.722.722 0 0 1 .598.082l1.584.926a.272.272 0 0 0 .14.047c.134 0 .24-.111.24-.247 0-.06-.023-.12-.038-.177l-.327-1.233a.582.582 0 0 1-.023-.156.49.49 0 0 1 .201-.398C23.024 18.48 24 16.82 24 14.98c0-3.21-2.931-5.952-7.062-6.122zm-2.18 2.769c.535 0 .969.44.969.982a.976.976 0 0 1-.969.983.976.976 0 0 1-.969-.983c0-.542.434-.982.97-.982zm4.844 0c.535 0 .969.44.969.982a.976.976 0 0 1-.969.983.976.976 0 0 1-.969-.983c0-.542.434-.982.97-.982z"/></svg>
+            </span>
+            <div class="contact-card-body">
+              <span class="contact-card-label">微信</span>
+              <span class="contact-card-value">${CONTACT.wechat}</span>
+            </div>
+          </div>
+          <div class="contact-card">
+            <span class="contact-card-icon oa-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12h8M12 8l4 4-4 4"/></svg>
+            </span>
+            <div class="contact-card-body">
+              <span class="contact-card-label">公众号</span>
+              <span class="contact-card-value">${CONTACT.official_account}</span>
+            </div>
           </div>
         </div>
+
+        <!-- 备注提示 -->
+        <div class="contact-note">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          ${CONTACT.intro}
+        </div>
+
       </div>
-      <p class="contact-note">${CONTACT.intro}</p>
     `;
 
     // Tag click on hero → tags page
@@ -140,7 +166,7 @@
         filterByTag(el.dataset.tag);
       });
     });
-    bindPostCards($('#recent-posts'));
+    if (recent.length) bindPostCards($('#recent-posts'));
   }
 
   /* ── Articles page ── */
@@ -296,6 +322,10 @@
   function renderTagsPage() {
     const tags = getAllTags();
     const sorted = Object.entries(tags).sort((a, b) => b[1] - a[1]);
+    if (sorted.length === 0) {
+      $('#tags-grid').innerHTML = `<div class="empty" style="grid-column:1/-1;padding:2rem 0">暂无标签</div>`;
+      return;
+    }
     $('#tags-grid').innerHTML = sorted.map(([tag, count]) => `
       <div class="tag-card" data-tag="${tag}">
         <div class="tag-card-name"># ${tag}</div>
@@ -315,7 +345,6 @@
 
   /* ── About page ── */
   function renderAbout() {
-    const totalWords = POSTS.reduce((s, p) => s + p.content.length, 0);
     const tags = getAllTags();
 
     $('#about-avatar').textContent = ABOUT.name[0];
@@ -353,7 +382,7 @@
 
     // Initial route
     const hash = location.hash.replace('#', '') || 'home';
-    showPage(['home', 'articles', 'tags', 'about', 'service', 'article'].includes(hash) ? hash : 'home');
+    showPage(VALID_PAGES.includes(hash) ? hash : 'home');
   }
 
   document.addEventListener('DOMContentLoaded', init);
