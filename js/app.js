@@ -1,76 +1,74 @@
 (() => {
-  const { POSTS, ABOUT, PRODUCTS, CONTACT } = window.BLOG_DATA;
+  'use strict';
 
-  /* ── Helpers ── */
-  const $ = (sel, ctx = document) => ctx.querySelector(sel);
-  const $$ = (sel, ctx = document) => [...ctx.querySelectorAll(sel)];
+  var DATA = window.BLOG_DATA || {};
+  var POSTS = DATA.POSTS || [];
+  var ABOUT = DATA.ABOUT || {};
+  var PRODUCTS = DATA.PRODUCTS || [];
+  var CONTACT = DATA.CONTACT || {};
 
-  // Safe markdown parser
+  function $(s, c) { return (c || document).querySelector(s); }
+  function $$(s, c) { return Array.prototype.slice.call((c || document).querySelectorAll(s)); }
+
   function parseMarkdown(md) {
     if (typeof marked !== 'undefined' && marked.parse) {
       try { return marked.parse(md.trim()); } catch (e) {}
     }
     return md.trim()
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-      .split('\n\n').map(block => {
-        const trimmed = block.trim();
-        if (/^#{2,3}\s/.test(trimmed)) return `<h3 style="margin-top:1.5em">${trimmed.replace(/^#{2,3}\s*/, '')}</h3>`;
-        if (/^#{1}\s/.test(trimmed)) return `<h2 style="margin-top:1.5em">${trimmed.replace(/^#\s*/, '')}</h2>`;
-        if (trimmed.startsWith('---')) return '<hr>';
-        if (trimmed.startsWith('- ') || trimmed.startsWith('* '))
-          return '<ul>' + trimmed.split('\n').map(l => `<li>${l.replace(/^[-*]\s*/, '')}</li>`).join('') + '</ul>';
-        if (/^\d+\.\s/.test(trimmed))
-          return '<ol>' + trimmed.split('\n').map(l => `<li>${l.replace(/^\d+\.\s*/, '')}</li>`).join('') + '</ol>';
-        return '<p>' + trimmed.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>') + '</p>';
+      .split('\n\n').map(function(block) {
+        var t = block.trim();
+        if (/^#{2,3}\s/.test(t)) return '<h3 style="margin-top:1.5em">' + t.replace(/^#{2,3}\s*/, '') + '</h3>';
+        if (/^#\s/.test(t)) return '<h2 style="margin-top:1.5em">' + t.replace(/^#\s*/, '') + '</h2>';
+        if (t.startsWith('---')) return '<hr>';
+        if (t.startsWith('- ') || t.startsWith('* ')) return '<ul>' + t.split('\n').map(function(l) { return '<li>' + l.replace(/^[-*]\s*/, '') + '</li>'; }).join('') + '</ul>';
+        if (/^\d+\.\s/.test(t)) return '<ol>' + t.split('\n').map(function(l) { return '<li>' + l.replace(/^\d+\.\s*/, '') + '</li>'; }).join('') + '</ol>';
+        return '<p>' + t.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>') + '</p>';
       }).join('\n');
   }
 
-  function formatDate(str) {
-    const d = new Date(str);
+  function formatDate(s) {
+    var d = new Date(s);
     return d.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' });
   }
 
   function getAllTags() {
-    const map = {};
-    POSTS.forEach(p => p.tags.forEach(t => { map[t] = (map[t] || 0) + 1; }));
-    return map;
+    var m = {};
+    POSTS.forEach(function(p) { p.tags.forEach(function(t) { m[t] = (m[t] || 0) + 1; }); });
+    return m;
   }
 
-  function renderTag(tag, active = false) {
-    return `<span class="tag${active ? ' active' : ''}" data-tag="${tag}">${tag}</span>`;
+  function renderTag(tag, active) {
+    return '<span class="tag' + (active ? ' active' : '') + '" data-tag="' + tag + '">' + tag + '</span>';
   }
 
   function renderPostCard(post) {
-    return `
-      <article class="post-card" data-id="${post.id}">
-        <div class="post-card-meta">
-          <span class="post-date">${formatDate(post.date)}</span>
-          ${post.tags.map(t => renderTag(t)).join('')}
-        </div>
-        <h3>${post.title}</h3>
-        <p>${post.summary}</p>
-        <div class="post-card-footer">
-          <span class="read-time">阅读约 ${post.readTime}</span>
-          <span style="font-size:12px;color:var(--primary)">阅读全文 →</span>
-        </div>
-      </article>`;
+    return '<article class="post-card" data-id="' + post.id + '">' +
+      '<div class="post-card-meta">' +
+        '<span class="post-date">' + formatDate(post.date) + '</span>' +
+        post.tags.map(function(t) { return renderTag(t); }).join('') +
+      '</div>' +
+      '<h3>' + post.title + '</h3>' +
+      '<p>' + post.summary + '</p>' +
+      '<div class="post-card-footer">' +
+        '<span class="read-time">阅读约 ' + post.readTime + '</span>' +
+        '<span style="font-size:12px;color:var(--primary)">阅读全文 →</span>' +
+      '</div>' +
+    '</article>';
   }
 
-  /* ── Router ── */
-  let currentPage = 'home';
-
-  // 主导航页面 + 内部页面
-  const NAV_PAGES = ['home', 'services', 'articles', 'contact'];
-  const VALID_PAGES = [...NAV_PAGES, 'article', 'service'];
+  /* ── 路由 ── */
+  var NAV_PAGES = ['home', 'services', 'articles', 'contact'];
+  var ALL_PAGES = NAV_PAGES.concat(['article', 'service']);
+  var currentPage = 'home';
 
   function showPage(name) {
-    $$('.page').forEach(p => p.classList.remove('active'));
-    const el = $(`#page-${name}`);
+    $$('.page').forEach(function(p) { p.classList.remove('active'); });
+    var el = $('#page-' + name);
     if (el) el.classList.add('active');
 
-    // 更新底部导航高亮（内部页不高亮）
-    $$('.bottom-nav-item').forEach(a => {
-      a.classList.toggle('active', a.dataset.page === name);
+    $$('.bottom-nav-item').forEach(function(a) {
+      a.classList.toggle('active', a.getAttribute('data-page') === name);
     });
 
     currentPage = name;
@@ -78,328 +76,235 @@
   }
 
   function navigate(name) {
-    if (NAV_PAGES.includes(name)) {
-      history.pushState({ page: name }, '', `#${name}`);
+    if (NAV_PAGES.indexOf(name) !== -1) {
+      history.pushState({ page: name }, '', '#' + name);
     }
     showPage(name);
   }
 
-  window.addEventListener('popstate', e => {
-    const page = (e.state && e.state.page) || 'home';
-    showPage(VALID_PAGES.includes(page) ? page : 'home');
+  window.addEventListener('popstate', function(e) {
+    var p = (e.state && e.state.page) || 'home';
+    showPage(ALL_PAGES.indexOf(p) !== -1 ? p : 'home');
   });
 
-  /* ── Home page ── */
-  function renderHome() {
-    const recent = POSTS.slice(0, 4);
-    const tags = getAllTags();
-    const topTags = Object.keys(tags).filter(t => t !== '晨星计划').slice(0, 6);
-
-    $('#hero-tags').innerHTML = topTags.map(t => renderTag(t)).join('');
-    $('#recent-posts').innerHTML = recent.length
-      ? recent.map(renderPostCard).join('')
-      : `<div class="empty" style="padding:2rem 0">暂无文章，敬请期待…</div>`;
-
-    // 服务预览卡片
-    $('#home-products').innerHTML = PRODUCTS.map(p => `
-      <div class="product-card" data-service="${p.id}">
-        <h4>${p.name}</h4>
-        <p>${p.desc}</p>
-        <span class="card-link">了解详情 →</span>
-      </div>
-    `).join('');
-
-    $('#home-products').addEventListener('click', (e) => {
-      const card = e.target.closest('.product-card');
-      if (card) {
+  /* ── 绑定导航 ── */
+  function bindNav() {
+    $$('.bottom-nav-item').forEach(function(a) {
+      a.addEventListener('click', function(e) {
         e.preventDefault();
-        openService(card.dataset.service);
-      }
-    });
-
-    // 联系预览（精简版）
-    const bioShort = ABOUT.bio.split('\n\n')[0];
-    $('#home-contact').innerHTML = `
-      <div class="contact-bio-card" style="margin-bottom:0;padding:1.5rem 1.5rem">
-        <div class="contact-avatar" style="width:56px;height:56px;font-size:1.5rem">${ABOUT.name[0]}</div>
-        <div class="contact-name" style="font-size:17px">${ABOUT.name}</div>
-        <div class="contact-role">${ABOUT.title}</div>
-        <div class="contact-bio-text" style="border-top:none;padding-top:0;margin-top:0.5rem;font-size:13px">
-          ${bioShort}
-        </div>
-      </div>
-    `;
-
-    // Tag click → articles page
-    $$('.tag', $('#hero-tags')).forEach(el => {
-      el.addEventListener('click', () => {
-        navigate('articles');
-        filterByTag(el.dataset.tag);
+        e.stopPropagation();
+        navigate(a.getAttribute('data-page'));
       });
     });
-    if (recent.length) bindPostCards($('#recent-posts'));
 
-    // 查看全部按钮
-    $('#btn-all-services').addEventListener('click', () => navigate('services'));
-    $('#btn-all-posts').addEventListener('click', () => navigate('articles'));
-    $('#btn-contact').addEventListener('click', () => navigate('contact'));
-  }
-
-  /* ── Services page ── */
-  function renderServicesPage() {
-    $('#services-list').innerHTML = PRODUCTS.map(p => `
-      <div class="service-card" data-service="${p.id}">
-        <h4>${p.name}</h4>
-        <p class="service-desc">${p.desc}</p>
-        <span class="service-link">了解详情 →</span>
-      </div>
-    `).join('');
-
-    $$('#services-list .service-card').forEach(card => {
-      card.addEventListener('click', () => openService(card.dataset.service));
+    $$('.nav-card').forEach(function(card) {
+      card.addEventListener('click', function(e) {
+        e.preventDefault();
+        navigate(card.getAttribute('data-page'));
+      });
     });
   }
 
-  /* ── Articles page ── */
-  let activeFilter = null;
+  /* ── 服务页 ── */
+  function renderServices() {
+    var container = $('#services-list');
+    if (!container) return;
+    container.innerHTML = PRODUCTS.map(function(p) {
+      return '<div class="service-card" data-service="' + p.id + '">' +
+        '<h4>' + p.name + '</h4>' +
+        '<p class="service-desc">' + p.desc + '</p>' +
+        '<span class="service-link">了解详情 →</span>' +
+      '</div>';
+    }).join('');
 
-  function renderArticles(filterTag = null) {
-    activeFilter = filterTag;
-    const filtered = filterTag ? POSTS.filter(p => p.tags.includes(filterTag)) : POSTS;
-    const container = $('#all-posts');
+    $$('.service-card', container).forEach(function(card) {
+      card.addEventListener('click', function() { openService(card.getAttribute('data-service')); });
+    });
+  }
+
+  /* ── 文章页 ── */
+  var activeFilter = null;
+
+  function renderArticles(filterTag) {
+    activeFilter = filterTag || null;
+    var container = $('#all-posts');
+    if (!container) return;
+
+    var filtered = filterTag ? POSTS.filter(function(p) { return p.tags.indexOf(filterTag) !== -1; }) : POSTS;
 
     if (filtered.length === 0) {
-      container.innerHTML = `<div class="empty">没有找到相关文章</div>`;
+      container.innerHTML = '<div class="empty">暂无文章，敬请期待…</div>';
       return;
     }
     container.innerHTML = filtered.map(renderPostCard).join('');
     bindPostCards(container);
 
-    const chips = $$('#filter-chips .tag');
-    chips.forEach(c => c.classList.toggle('active', c.dataset.tag === filterTag));
-    if (!filterTag) chips.forEach(c => c.classList.remove('active'));
+    $$('#filter-chips .tag').forEach(function(c) {
+      c.classList.toggle('active', c.getAttribute('data-tag') === (filterTag || ''));
+    });
   }
 
   function bindPostCards(container) {
-    $$('.post-card', container).forEach(card => {
-      card.addEventListener('click', e => {
-        const tagEl = e.target.closest('.tag');
+    $$('.post-card', container).forEach(function(card) {
+      card.addEventListener('click', function(e) {
+        var tagEl = e.target.closest('.tag');
         if (tagEl) {
           e.stopPropagation();
-          renderArticles(tagEl.dataset.tag);
+          renderArticles(tagEl.getAttribute('data-tag'));
           return;
         }
-        openArticle(parseInt(card.dataset.id));
-      });
-    });
-    $$('.tag', container).forEach(tag => {
-      tag.addEventListener('click', e => {
-        e.stopPropagation();
-        renderArticles(tag.dataset.tag);
+        openArticle(parseInt(card.getAttribute('data-id'), 10));
       });
     });
   }
 
   function buildFilterChips() {
-    const tags = getAllTags();
-    const sorted = Object.entries(tags).sort((a, b) => b[1] - a[1]);
-    const wrap = $('#filter-chips');
-    wrap.innerHTML = `<span class="tag" data-tag="">全部</span>` +
-      sorted.map(([t]) => `<span class="tag" data-tag="${t}">${t}</span>`).join('');
-    $$('.tag', wrap).forEach(el => {
-      el.addEventListener('click', () => renderArticles(el.dataset.tag || null));
+    var wrap = $('#filter-chips');
+    if (!wrap) return;
+    var tags = getAllTags();
+    var sorted = Object.keys(tags).sort(function(a, b) { return tags[b] - tags[a]; });
+    wrap.innerHTML = '<span class="tag" data-tag="">全部</span>' +
+      sorted.map(function(t) { return '<span class="tag" data-tag="' + t + '">' + t + '</span>'; }).join('');
+    $$('.tag', wrap).forEach(function(el) {
+      el.addEventListener('click', function() {
+        renderArticles(el.getAttribute('data-tag') || null);
+      });
     });
   }
 
   function bindSearch() {
-    const inp = $('#search-input');
+    var inp = $('#search-input');
     if (!inp) return;
-    inp.addEventListener('input', () => {
-      const q = inp.value.trim().toLowerCase();
+    inp.addEventListener('input', function() {
+      var q = inp.value.trim().toLowerCase();
       if (!q) { renderArticles(activeFilter); return; }
-      const filtered = POSTS.filter(p =>
-        p.title.toLowerCase().includes(q) ||
-        p.summary.toLowerCase().includes(q) ||
-        p.tags.some(t => t.toLowerCase().includes(q))
-      );
-      const container = $('#all-posts');
+      var filtered = POSTS.filter(function(p) {
+        return p.title.toLowerCase().indexOf(q) !== -1 ||
+               p.summary.toLowerCase().indexOf(q) !== -1 ||
+               p.tags.some(function(t) { return t.toLowerCase().indexOf(q) !== -1; });
+      });
+      var container = $('#all-posts');
       container.innerHTML = filtered.length
         ? filtered.map(renderPostCard).join('')
-        : `<div class="empty">没有找到"${q}"相关的文章</div>`;
+        : '<div class="empty">没有找到"' + q + '"相关的文章</div>';
       if (filtered.length) bindPostCards(container);
     });
   }
 
-  /* ── Article detail ── */
+  /* ── 文章详情 ── */
   function openArticle(id) {
-    const post = POSTS.find(p => p.id === id);
+    var post = POSTS.filter(function(p) { return p.id === id; })[0];
     if (!post) return;
 
-    const html = parseMarkdown(post.content);
-    const toc = buildTOC(post.content);
+    var html = parseMarkdown(post.content);
+    var toc = buildTOC(post.content);
 
-    $('#article-container').innerHTML = `
-      <button class="back-btn" id="btn-back">← 返回</button>
-      <div class="article-header">
-        <h1 class="article-title">${post.title}</h1>
-        <div class="article-meta">
-          <span>${formatDate(post.date)}</span>
-          <span>·</span>
-          <span>阅读约 ${post.readTime}</span>
-          <span>·</span>
-          ${post.tags.map(t => renderTag(t)).join('')}
-        </div>
-      </div>
-      ${toc ? `<div class="toc"><div class="toc-title">目录</div>${toc}</div>` : ''}
-      <div class="md-content">${html}</div>
-    `;
+    $('#article-container').innerHTML =
+      '<button class="back-btn" id="btn-back">← 返回</button>' +
+      '<div class="article-header">' +
+        '<h1 class="article-title">' + post.title + '</h1>' +
+        '<div class="article-meta">' +
+          '<span>' + formatDate(post.date) + '</span><span>·</span>' +
+          '<span>阅读约 ' + post.readTime + '</span><span>·</span>' +
+          post.tags.map(function(t) { return renderTag(t); }).join('') +
+        '</div>' +
+      '</div>' +
+      (toc ? '<div class="toc"><div class="toc-title">目录</div>' + toc + '</div>' : '') +
+      '<div class="md-content">' + html + '</div>';
 
-    $('#btn-back').addEventListener('click', () => {
+    $('#btn-back').addEventListener('click', function() {
       history.back();
-      // fallback if no history
-      setTimeout(() => { if (currentPage === 'article') navigate('articles'); }, 100);
-    });
-    $$('.tag', $('#article-container')).forEach(el => {
-      el.addEventListener('click', () => {
-        navigate('articles');
-        renderArticles(el.dataset.tag);
-      });
+      setTimeout(function() { if (currentPage === 'article') navigate('articles'); }, 100);
     });
 
     navigate('article');
   }
 
-  /* ── Service detail ── */
+  /* ── 服务详情 ── */
   function openService(id) {
-    const service = PRODUCTS.find(p => p.id === id);
+    var service = PRODUCTS.filter(function(p) { return p.id === id; })[0];
     if (!service) return;
 
-    const html = parseMarkdown(service.content);
+    var html = parseMarkdown(service.content);
 
-    $('#service-container').innerHTML = `
-      <button class="back-btn" id="btn-service-back">← 返回</button>
-      <div class="article-header">
-        <h1 class="article-title">${service.name}</h1>
-      </div>
-      <div class="md-content">${html}</div>
-    `;
+    $('#service-container').innerHTML =
+      '<button class="back-btn" id="btn-svc-back">← 返回</button>' +
+      '<div class="article-header"><h1 class="article-title">' + service.name + '</h1></div>' +
+      '<div class="md-content">' + html + '</div>';
 
-    $('#btn-service-back').addEventListener('click', () => {
+    $('#btn-svc-back').addEventListener('click', function() {
       history.back();
-      setTimeout(() => { if (currentPage === 'service') navigate('services'); }, 100);
+      setTimeout(function() { if (currentPage === 'service') navigate('services'); }, 100);
     });
 
     navigate('service');
   }
 
   function buildTOC(md) {
-    const headings = [];
-    const lines = md.split('\n');
-    lines.forEach(line => {
-      const m = line.match(/^(#{2,3})\s+(.+)/);
-      if (m) {
-        const level = m[1].length;
-        const text = m[2].trim();
-        const anchor = text.replace(/\s+/g, '-').toLowerCase();
-        headings.push({ level, text, anchor });
-      }
+    var headings = [];
+    md.split('\n').forEach(function(line) {
+      var m = line.match(/^(#{2,3})\s+(.+)/);
+      if (m) headings.push({ level: m[1].length, text: m[2].trim() });
     });
     if (headings.length < 2) return '';
-    const items = headings.map(h => {
-      const indent = h.level === 3 ? 'style="margin-left:1em"' : '';
-      return `<li ${indent}><a href="#${h.anchor}">${h.text}</a></li>`;
-    }).join('');
-    return `<ul>${items}</ul>`;
+    return '<ul>' + headings.map(function(h) {
+      return '<li' + (h.level === 3 ? ' style="margin-left:1em"' : '') + '>' + h.text + '</li>';
+    }).join('') + '</ul>';
   }
 
-  /* ── Contact page ── */
+  /* ── 联系页 ── */
   function renderContact() {
-    const tags = getAllTags();
+    var container = $('#contact-full');
+    if (!container) return;
+    var tags = getAllTags();
 
-    $('#contact-full').innerHTML = `
-      <!-- 个人介绍卡 -->
-      <div class="contact-bio-card">
-        <div class="contact-avatar">${ABOUT.name[0]}</div>
-        <div class="contact-name">${ABOUT.name}</div>
-        <div class="contact-role">${ABOUT.title}</div>
-        <div class="contact-stats">
-          <div class="stat-item">
-            <div class="stat-num">${POSTS.length}</div>
-            <div class="stat-label">篇文章</div>
-          </div>
-          <div class="stat-item">
-            <div class="stat-num">${Object.keys(tags).length}</div>
-            <div class="stat-label">个标签</div>
-          </div>
-        </div>
-        <div class="contact-bio-text">
-          ${ABOUT.bio.split('\n\n').map(p => `<p>${p}</p>`).join('')}
-        </div>
-      </div>
+    var bioHtml = ABOUT.bio ? ABOUT.bio.split('\n\n').map(function(p) { return '<p>' + p + '</p>'; }).join('') : '';
+    var skillsHtml = (ABOUT.skills || []).map(function(s) { return '<span class="skill-tag">' + s + '</span>'; }).join('');
 
-      <!-- 联系方式卡片 -->
-      <div class="contact-cards">
-        <div class="contact-card">
-          <span class="contact-card-icon wechat-icon">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M8.691 2.188C3.891 2.188 0 5.476 0 9.53c0 2.212 1.17 4.203 3.002 5.55a.59.59 0 0 1 .213.665l-.39 1.48c-.019.07-.048.141-.048.213 0 .163.13.295.29.295a.326.326 0 0 0 .167-.054l1.903-1.114a.864.864 0 0 1 .717-.098 10.16 10.16 0 0 0 2.837.403c.276 0 .543-.027.811-.05-.857-2.578.157-4.972 1.932-6.446 1.703-1.415 3.882-1.98 5.853-1.838-.576-3.583-4.196-6.348-8.596-6.348zM5.785 5.991c.642 0 1.162.529 1.162 1.18a1.17 1.17 0 0 1-1.162 1.178A1.17 1.17 0 0 1 4.623 7.17c0-.651.52-1.18 1.162-1.18zm5.813 0c.642 0 1.162.529 1.162 1.18a1.17 1.17 0 0 1-1.162 1.178 1.17 1.17 0 0 1-1.162-1.178c0-.651.52-1.18 1.162-1.18zm5.34 2.867c-1.797-.052-3.746.512-5.28 1.786-1.72 1.428-2.687 3.72-1.78 6.22.942 2.453 3.666 4.229 6.884 4.229.826 0 1.622-.12 2.361-.336a.722.722 0 0 1 .598.082l1.584.926a.272.272 0 0 0 .14.047c.134 0 .24-.111.24-.247 0-.06-.023-.12-.038-.177l-.327-1.233a.582.582 0 0 1-.023-.156.49.49 0 0 1 .201-.398C23.024 18.48 24 16.82 24 14.98c0-3.21-2.931-5.952-7.062-6.122zm-2.18 2.769c.535 0 .969.44.969.982a.976.976 0 0 1-.969.983.976.976 0 0 1-.969-.983c0-.542.434-.982.97-.982zm4.844 0c.535 0 .969.44.969.982a.976.976 0 0 1-.969.983.976.976 0 0 1-.969-.983c0-.542.434-.982.97-.982z"/></svg>
-          </span>
-          <div class="contact-card-body">
-            <span class="contact-card-label">微信</span>
-            <span class="contact-card-value">${CONTACT.wechat}</span>
-          </div>
-        </div>
-        <div class="contact-card">
-          <span class="contact-card-icon oa-icon">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12h8M12 8l4 4-4 4"/></svg>
-          </span>
-          <div class="contact-card-body">
-            <span class="contact-card-label">公众号</span>
-            <span class="contact-card-value">${CONTACT.official_account}</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- 擅长领域 -->
-      <div class="contact-skills">
-        <div class="contact-skills-title">擅长领域</div>
-        <div class="skill-tags">
-          ${ABOUT.skills.map(s => `<span class="skill-tag">${s}</span>`).join('')}
-        </div>
-      </div>
-
-      <!-- 备注提示 -->
-      <div class="contact-note" style="margin-top:1.5rem">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-        ${CONTACT.intro}
-      </div>
-    `;
+    container.innerHTML =
+      '<div class="contact-bio-card">' +
+        '<div class="contact-avatar">' + (ABOUT.name || 'E')[0] + '</div>' +
+        '<div class="contact-name">' + (ABOUT.name || '') + '</div>' +
+        '<div class="contact-role">' + (ABOUT.title || '') + '</div>' +
+        '<div class="contact-stats">' +
+          '<div class="stat-item"><div class="stat-num">' + POSTS.length + '</div><div class="stat-label">篇文章</div></div>' +
+          '<div class="stat-item"><div class="stat-num">' + Object.keys(tags).length + '</div><div class="stat-label">个标签</div></div>' +
+        '</div>' +
+        '<div class="contact-bio-text">' + bioHtml + '</div>' +
+      '</div>' +
+      '<div class="contact-cards">' +
+        '<div class="contact-card">' +
+          '<span class="contact-card-icon wechat-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M8.691 2.188C3.891 2.188 0 5.476 0 9.53c0 2.212 1.17 4.203 3.002 5.55a.59.59 0 0 1 .213.665l-.39 1.48c-.019.07-.048.141-.048.213 0 .163.13.295.29.295a.326.326 0 0 0 .167-.054l1.903-1.114a.864.864 0 0 1 .717-.098 10.16 10.16 0 0 0 2.837.403c.276 0 .543-.027.811-.05-.857-2.578.157-4.972 1.932-6.446 1.703-1.415 3.882-1.98 5.853-1.838-.576-3.583-4.196-6.348-8.596-6.348zM5.785 5.991c.642 0 1.162.529 1.162 1.18a1.17 1.17 0 0 1-1.162 1.178A1.17 1.17 0 0 1 4.623 7.17c0-.651.52-1.18 1.162-1.18zm5.813 0c.642 0 1.162.529 1.162 1.18a1.17 1.17 0 0 1-1.162 1.178 1.17 1.17 0 0 1-1.162-1.178c0-.651.52-1.18 1.162-1.18zm5.34 2.867c-1.797-.052-3.746.512-5.28 1.786-1.72 1.428-2.687 3.72-1.78 6.22.942 2.453 3.666 4.229 6.884 4.229.826 0 1.622-.12 2.361-.336a.722.722 0 0 1 .598.082l1.584.926a.272.272 0 0 0 .14.047c.134 0 .24-.111.24-.247 0-.06-.023-.12-.038-.177l-.327-1.233a.582.582 0 0 1-.023-.156.49.49 0 0 1 .201-.398C23.024 18.48 24 16.82 24 14.98c0-3.21-2.931-5.952-7.062-6.122zm-2.18 2.769c.535 0 .969.44.969.982a.976.976 0 0 1-.969.983.976.976 0 0 1-.969-.983c0-.542.434-.982.97-.982zm4.844 0c.535 0 .969.44.969.982a.976.976 0 0 1-.969.983.976.976 0 0 1-.969-.983c0-.542.434-.982.97-.982z"/></svg></span>' +
+          '<div class="contact-card-body"><span class="contact-card-label">微信</span><span class="contact-card-value">' + (CONTACT.wechat || '') + '</span></div>' +
+        '</div>' +
+        '<div class="contact-card">' +
+          '<span class="contact-card-icon oa-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12h8M12 8l4 4-4 4"/></svg></span>' +
+          '<div class="contact-card-body"><span class="contact-card-label">公众号</span><span class="contact-card-value">' + (CONTACT.official_account || '') + '</span></div>' +
+        '</div>' +
+      '</div>' +
+      (skillsHtml ? '<div class="contact-skills"><div class="contact-skills-title">擅长领域</div><div class="skill-tags">' + skillsHtml + '</div></div>' : '') +
+      '<div class="contact-note">' +
+        '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>' +
+        (CONTACT.intro || '') +
+      '</div>';
   }
 
-  function filterByTag(tag) {
-    renderArticles(tag);
-  }
-
-  /* ── Nav & Init ── */
+  /* ── 初始化 ── */
   function init() {
-    // 底部导航点击
-    $$('.bottom-nav-item').forEach(a => {
-      a.addEventListener('click', e => {
-        e.preventDefault();
-        navigate(a.dataset.page);
-      });
-    });
-
-    renderHome();
-    renderServicesPage();
+    bindNav();
+    renderServices();
     buildFilterChips();
     renderArticles();
     bindSearch();
     renderContact();
 
-    // Initial route
-    const hash = location.hash.replace('#', '') || 'home';
-    showPage(VALID_PAGES.includes(hash) ? hash : 'home');
+    var hash = (location.hash || '').replace('#', '') || 'home';
+    showPage(ALL_PAGES.indexOf(hash) !== -1 ? hash : 'home');
   }
 
-  document.addEventListener('DOMContentLoaded', init);
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
 })();
