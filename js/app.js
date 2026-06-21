@@ -7,13 +7,12 @@
   var PRODUCTS = DATA.PRODUCTS || [];
   var CONTACT = DATA.CONTACT || {};
   var SECRET_PASSWORD = 'elj2026';  /* ← 改这里换密码 */
-  var SECRET_CONTENT = DATA.SECRET_CONTENT || '';
   var isSecretUnlocked = false;
 
-  /* GitHub API 配置（用于保存隐藏页面内容） */
+  /* GitHub API 配置（用于便签功能） */
   var GITHUB_REPO = 'yuehuaqing358/yuehuaqing358.github.io';
   var GITHUB_BRANCH = 'main';
-  var GITHUB_DATA_JS_PATH = 'js/data.js';
+  var GITHUB_NOTES_PATH = 'secret-notes';
 
   function getGitHubToken() {
     return localStorage.getItem('gh_token') || '';
@@ -95,7 +94,7 @@
       a.classList.toggle('active', a.getAttribute('data-page') === name);
     });
 
-    if (name === 'secret') renderSecret();
+    if (name === 'secret') loadNotes();
 
     currentPage = name;
     window.scrollTo(0, 0);
@@ -164,31 +163,264 @@
     }
   }
 
-  /* ── 隐藏页面 ── */
-  function renderSecret() {
-    var container = $('#secret-content');
-    if (!container) return;
-    container.innerHTML = parseMarkdown(SECRET_CONTENT);
-    var editBtn = $('#secret-edit-btn');
-    if (editBtn) editBtn.style.display = isSecretUnlocked ? '' : 'none';
+  /* ══ 专属空间·便签本 ══ */
+  var currentNoteId = null;   /* 当前正在编辑的便签文件名（不含路径）*/
+  var notesList = [];        /* 缓存的便签列表 */
+
+  /* 加载便签列表 */
+  function loadNotes() {
+    if (!isSecretUnlocked) return;
+    showNoteList();
+
+    fetch('https://api.github.com/repos/' + GITHUB_REPO + '/contents/' + GITHUB_NOTES_PATH, {
+      headers: { 'User-Agent': 'Mozilla/5.0' }
+    })
+    .then(function(r) {
+      if (r.status === 404) return [];
+      return r.json();
+    })
+    .then(function(data) {
+      if (!Array.isArray(data)) {
+        notesList = [];
+      } else {
+        notesList = data.filter(function(f) { return f.name.endsWith('.md'); }).map(function(f) {
+          return { id: f.name.replace(/\.md$/, ''), name: f.name, sha: f.sha, url: f.html_url };
+        });
+      }
+      renderNotesList();
+    })
+    .catch(function() { notesList = []; renderNotesList(); });
   }
 
-  function editSecret() {
-    var container = $('#secret-content');
-    if (!container) return;
-    var html = SECRET_CONTENT.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-    container.innerHTML =
-      '<textarea id="secret-editor" placeholder="在这里写你的内容，支持换行和段落…">' + html + '</textarea>' +
-      '<div class="secret-edit-actions">' +
-        '<button class="secret-cancel-btn" id="secret-cancel-btn">取消</button>' +
-        '<button class="secret-save-btn" id="secret-save-btn">保存</button>' +
-      '</div>';
-    $('#secret-save-btn').addEventListener('click', saveSecret);
-    $('#secret-cancel-btn').addEventListener('click', renderSecret);
-    var editor = $('#secret-editor');
-    if (editor) editor.focus();
+  /* 渲染便签列表 */
+  function renderNotesList() {
+    var grid = $('#notes-grid');
+    var empty = $('#notes-empty');
+    if (!grid) return;
+
+    /* 保留「新建」卡片，清空其余 */
+    var addCard = $('#note-add-btn');
+    grid.innerHTML = '';
+    if (addCard) grid.appendChild(addCard);
+
+    if (notesList.length === 0) {
+      if (empty) empty.classList.add('show');
+    } else {
+      if (empty) empty.classList.remove('show');
+      /* 按文件名倒序（新的在前）*/
+      notesList.slice().sort(function(a, b) { return b.id.localeCompare(a.id); }).forEach(function(note) {
+        var card = document.createElement('div');
+        card.className = 'note-card';
+        card.setAttribute('data-note-id', note.id);
+
+        var ts = note.id.replace('note-', '');
+        var d = new Date(parseInt(ts, 10));
+        var dateStr = d.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' });
+
+        card.innerHTML =
+          '<div class="note-card-title">未命名便签</div>' +
+          '<div class="note-card-preview"></div>' +
+          '<div class="note-card-date">' + dateStr + '</div>';
+
+        card.addEventListener('click', function() { openNote(note.id); });
+        grid.appendChild(card);
+
+        /* 异步读取标题和预览 */
+        loadNoteMeta(note.id, card);
+      });
+    }
   }
 
+  /* 异步读取便签的标题和预览文本 */
+  function loadNoteMeta(noteId, card) {
+    fetch('https://api.github.com/repos/' + GITHUB_REPO + '/contents/' + GITHUB_NOTES_PATH + '/' + noteId + '.md', {
+      headers: { 'User-Agent': 'Mozilla/5.0' }
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (!data.content) return;
+      var raw = b64_to_utf8(data.content);
+      var match = raw.match(/^---\s*\n([\s\S]*?)\n---(?:\n|$)([\s\S]*)$/);
+      var title = '';
+      var content = raw;
+      if (match) {
+        var fm = match[1];
+        var fmMatch = fm.match(/^title:\s*(.+)$/m);
+        if (fmMatch) title = fmMatch[1].trim();
+        content = match[2];
+      }
+      var tEl = card.querySelector('.note-card-title');
+      var pEl = card.querySelector('.note-card-preview');
+      if (tEl) tEl.textContent = title || '未命名便签';
+      if (pEl) pEl.textContent = content.trim().split('\n')[0] || '';
+    })
+    .catch(function() {});
+  }
+
+  /* 显示列表视图 */
+  function showNoteList() {
+    var listEl = $('#secret-notes-view');
+    var editEl = $('#secret-note-edit');
+    if (listEl) listEl.style.display = '';
+    if (editEl) editEl.style.display = 'none';
+  }
+
+  /* 显示编辑视图 */
+  function showNoteEdit() {
+    var listEl = $('#secret-notes-view');
+    var editEl = $('#secret-note-edit');
+    if (listEl) listEl.style.display = 'none';
+    if (editEl) editEl.style.display = '';
+  }
+
+  /* 打开便签（读取内容）*/
+  function openNote(noteId) {
+    currentNoteId = noteId;
+    showNoteEdit();
+    var titleInput = $('#note-title-input');
+    var contentInput = $('#note-content-input');
+    var dateEl = $('#note-edit-date');
+    if (titleInput) titleInput.value = '';
+    if (contentInput) contentInput.value = '加载中…';
+
+    var ts = noteId.replace('note-', '');
+    var d = new Date(parseInt(ts, 10));
+    if (dateEl) dateEl.textContent = '创建于 ' + d.toLocaleString('zh-CN', { year:'numeric', month:'long', day:'numeric', hour:'2-digit', minute:'2-digit' });
+
+    fetch('https://api.github.com/repos/' + GITHUB_REPO + '/contents/' + GITHUB_NOTES_PATH + '/' + noteId + '.md', {
+      headers: { 'User-Agent': 'Mozilla/5.0' }
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (!data.content) return;
+      var raw = b64_to_utf8(data.content);
+      var match = raw.match(/^---\s*\n([\s\S]*?)\n---(?:\n|$)([\s\S]*)$/);
+      var title = '';
+      var content = raw;
+      if (match) {
+        var fm = match[1];
+        var fmMatch = fm.match(/^title:\s*(.+)$/m);
+        if (fmMatch) title = fmMatch[1].trim();
+        content = match[2];
+      }
+      if (titleInput) titleInput.value = title;
+      if (contentInput) contentInput.value = content;
+    })
+    .catch(function() {
+      if (contentInput) contentInput.value = '';
+    });
+  }
+
+  /* 新建便签 */
+  function createNote() {
+    currentNoteId = null;
+    showNoteEdit();
+    var titleInput = $('#note-title-input');
+    var contentInput = $('#note-content-input');
+    var dateEl = $('#note-edit-date');
+    if (titleInput) titleInput.value = '';
+    if (contentInput) contentInput.value = '';
+    if (dateEl) dateEl.textContent = '新建便签';
+  }
+
+  /* 保存便签 */
+  function saveNote() {
+    var token = getGitHubToken();
+    if (!token) { showTokenModal(); return; }
+    doSaveNote(token);
+  }
+
+  function doSaveNote(token) {
+    var titleInput = $('#note-title-input');
+    var contentInput = $('#note-content-input');
+    if (!contentInput) return;
+    var title = titleInput ? titleInput.value.trim() : '';
+    var content = contentInput.value;
+    var saveBtn = $('#note-save-btn');
+    if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = '保存中…'; }
+
+    var fileName, fileContent;
+    fileName = (currentNoteId || ('note-' + Date.now())) + '.md';
+    fileContent = '---\ntitle: ' + title + '\ncreated: ' + new Date().toISOString() + '\n---\n\n' + content;
+
+    function finishSave() {
+      if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '保存'; }
+      alert('保存成功！');
+      loadNotes();
+    }
+
+    function handleErr(err) {
+      if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '保存'; }
+      alert('保存失败：' + (err && err.message ? err.message : '请重试'));
+    }
+
+    if (currentNoteId) {
+      /* 更新已有便签：先获取 SHA */
+      fetch('https://api.github.com/repos/' + GITHUB_REPO + '/contents/' + GITHUB_NOTES_PATH + '/' + fileName, {
+        headers: { 'Authorization': 'token ' + token, 'User-Agent': 'Mozilla/5.0' }
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        return fetch('https://api.github.com/repos/' + GITHUB_REPO + '/contents/' + GITHUB_NOTES_PATH + '/' + fileName, {
+          method: 'PUT',
+          headers: { 'Authorization': 'token ' + token, 'Content-Type': 'application/json', 'User-Agent': 'Mozilla/5.0' },
+          body: JSON.stringify({ message: '更新便签', content: utf8_to_b64(fileContent), sha: data.sha, branch: GITHUB_BRANCH })
+        });
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.commit) finishSave();
+        else throw new Error(data.message || '保存失败');
+      })
+      .catch(handleErr);
+    } else {
+      /* 新建便签 */
+      currentNoteId = fileName.replace(/\.md$/, '');
+      fetch('https://api.github.com/repos/' + GITHUB_REPO + '/contents/' + GITHUB_NOTES_PATH + '/' + fileName, {
+        method: 'PUT',
+        headers: { 'Authorization': 'token ' + token, 'Content-Type': 'application/json', 'User-Agent': 'Mozilla/5.0' },
+        body: JSON.stringify({ message: '新建便签', content: utf8_to_b64(fileContent), branch: GITHUB_BRANCH })
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.content) finishSave();
+        else throw new Error(data.message || '保存失败');
+      })
+      .catch(handleErr);
+    }
+  }
+
+  /* 删除便签 */
+  function deleteNote() {
+    if (!currentNoteId) return;
+    if (!confirm('确定要删除这个便签吗？删除后无法恢复。')) return;
+    var token = getGitHubToken();
+    if (!token) { showTokenModal(); return; }
+
+    var fileName = currentNoteId + '.md';
+    fetch('https://api.github.com/repos/' + GITHUB_REPO + '/contents/' + GITHUB_NOTES_PATH + '/' + fileName, {
+      headers: { 'Authorization': 'token ' + token, 'User-Agent': 'Mozilla/5.0' }
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      return fetch('https://api.github.com/repos/' + GITHUB_REPO + '/contents/' + GITHUB_NOTES_PATH + '/' + fileName, {
+        method: 'DELETE',
+        headers: { 'Authorization': 'token ' + token, 'Content-Type': 'application/json', 'User-Agent': 'Mozilla/5.0' },
+        body: JSON.stringify({ message: '删除便签', sha: data.sha, branch: GITHUB_BRANCH })
+      });
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.commit) {
+        alert('删除成功！');
+        currentNoteId = null;
+        loadNotes();
+      } else throw new Error(data.message || '删除失败');
+    })
+    .catch(function(err) { alert('删除失败：' + (err.message || '请重试')); });
+  }
+
+  /* Token 弹窗 */
   function showTokenModal() {
     var overlay = $('#token-overlay');
     if (!overlay) return;
@@ -198,58 +430,12 @@
     var err = $('#token-error');
     if (err) err.classList.remove('show');
   }
-
   function hideTokenModal() {
     var overlay = $('#token-overlay');
     if (overlay) overlay.classList.remove('show');
   }
 
-  function saveSecret() {
-    var token = getGitHubToken();
-    if (!token) { showTokenModal(); return; }
-    doSaveSecret(token);
-  }
-
-  function doSaveSecret(token) {
-    var editor = $('#secret-editor');
-    if (!editor) return;
-    var newContent = editor.value;
-    var saveBtn = $('#secret-save-btn');
-    if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = '保存中…'; }
-    fetch('https://api.github.com/repos/' + GITHUB_REPO + '/contents/' + GITHUB_DATA_JS_PATH, {
-      headers: { 'Authorization': 'token ' + token, 'User-Agent': 'Mozilla/5.0' }
-    })
-    .then(function(r){ return r.json(); })
-    .then(function(data){
-      if (!data.content) throw new Error('无法读取 data.js');
-      var sha = data.sha;
-      var jsContent = b64_to_utf8(data.content);
-      var lines = jsContent.split('\n');
-      var startIdx = -1, endIdx = -1;
-      for (var i = 0; i < lines.length; i++) {
-        if (lines[i].indexOf('/* SECRET_CONTENT_START */') !== -1) startIdx = i;
-        if (startIdx !== -1 && lines[i].indexOf('/* SECRET_CONTENT_END */') !== -1) { endIdx = i; break; }
-      }
-      if (startIdx === -1 || endIdx === -1) throw new Error('data.js 格式错误：找不到标记');
-      var escaped = newContent.replace(/\\/g,'\\\\').replace(/`/g,'\\`').replace(/\${/g,'\\${');
-      lines = lines.slice(0, startIdx + 1).concat(['const SECRET_CONTENT = `' + escaped + '`;'], lines.slice(endIdx));
-      var newJs = lines.join('\n');
-      return fetch('https://api.github.com/repos/' + GITHUB_REPO + '/contents/' + GITHUB_DATA_JS_PATH, {
-        method: 'PUT',
-        headers: { 'Authorization': 'token ' + token, 'Content-Type': 'application/json', 'User-Agent': 'Mozilla/5.0' },
-        body: JSON.stringify({ message: '更新隐藏页面内容', content: utf8_to_b64(newJs), sha: sha, branch: GITHUB_BRANCH })
-      });
-    })
-    .then(function(r){ return r.json(); })
-    .then(function(data){
-      if (data.commit) { SECRET_CONTENT = newContent; renderSecret(); alert('保存成功！'); }
-      else throw new Error(data.message || '保存失败');
-    })
-    .catch(function(err){ console.error(err); alert('保存失败：' + (err.message || '请重试')); })
-    .finally(function(){ var b = $('#secret-save-btn'); if (b) { b.disabled = false; b.textContent = '保存'; } });
-  }
-
-  /* 双击头像绑定已在 renderContact 中处理 */
+  /* 双击头像绑定 */
   function bindAvatarDblClick() {
     var avatar = $('.contact-avatar');
     if (avatar) {
@@ -468,7 +654,7 @@
     bindSearch();
     renderContact();
 
-    // 密码弹窗事件
+    /* 密码弹窗事件 */
     var pwdBtn = $('#pwd-btn');
     if (pwdBtn) pwdBtn.addEventListener('click', checkPassword);
 
@@ -488,11 +674,29 @@
     var secretBack = $('#secret-back');
     if (secretBack) secretBack.addEventListener('click', function() { navigate('contact'); });
 
-    // 隐藏页面编辑按钮
-    var editBtn = $('#secret-edit-btn');
-    if (editBtn) editBtn.addEventListener('click', editSecret);
+    /* 便签：新建按钮 */
+    var noteAddBtn = $('#note-add-btn');
+    if (noteAddBtn) noteAddBtn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      createNote();
+    });
 
-    // Token 弹窗事件
+    /* 便签：保存按钮 */
+    var noteSaveBtn = $('#note-save-btn');
+    if (noteSaveBtn) noteSaveBtn.addEventListener('click', saveNote);
+
+    /* 便签：删除按钮 */
+    var noteDeleteBtn = $('#note-delete-btn');
+    if (noteDeleteBtn) noteDeleteBtn.addEventListener('click', deleteNote);
+
+    /* 便签：返回按钮（编辑页）*/
+    var noteEditBack = $('#note-edit-back');
+    if (noteEditBack) noteEditBack.addEventListener('click', function() {
+      currentNoteId = null;
+      loadNotes();
+    });
+
+    /* Token 弹窗事件 */
     var tokenBtn = $('#token-btn');
     if (tokenBtn) tokenBtn.addEventListener('click', function() {
       var input = $('#token-input');
@@ -505,7 +709,8 @@
       if (err) err.classList.remove('show');
       setGitHubToken(token);
       hideTokenModal();
-      doSaveSecret(token);
+      /* 继续刚才未完成的保存 */
+      doSaveNote(token);
     });
 
     var tokenInput = $('#token-input');
