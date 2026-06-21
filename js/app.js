@@ -6,6 +6,7 @@
   var ABOUT = DATA.ABOUT || {};
   var PRODUCTS = DATA.PRODUCTS || [];
   var CONTACT = DATA.CONTACT || {};
+  var SECRET_PASSWORD = 'elj2026';  /* ← 改这里换密码 */
 
   function $(s, c) { return (c || document).querySelector(s); }
   function $$(s, c) { return Array.prototype.slice.call((c || document).querySelectorAll(s)); }
@@ -59,7 +60,7 @@
 
   /* ── 路由 ── */
   var NAV_PAGES = ['home', 'services', 'articles', 'contact'];
-  var ALL_PAGES = NAV_PAGES.concat(['article', 'service']);
+  var ALL_PAGES = NAV_PAGES.concat(['article', 'service', 'secret']);
   var currentPage = 'home';
 
   function showPage(name) {
@@ -105,6 +106,48 @@
       });
     }
 
+  }
+
+  /* ── 密码弹窗 ── */
+  function showPwdModal() {
+    var overlay = $('#pwd-overlay');
+    if (!overlay) return;
+    overlay.classList.add('show');
+    var input = $('#pwd-input');
+    if (input) { input.value = ''; input.focus(); }
+    var err = $('#pwd-error');
+    if (err) err.classList.remove('show');
+  }
+
+  function hidePwdModal() {
+    var overlay = $('#pwd-overlay');
+    if (overlay) overlay.classList.remove('show');
+  }
+
+  function checkPassword() {
+    var input = $('#pwd-input');
+    if (!input) return;
+    if (input.value === SECRET_PASSWORD) {
+      hidePwdModal();
+      navigate('secret');
+    } else {
+      var err = $('#pwd-error');
+      if (err) err.classList.add('show');
+      input.value = '';
+      input.focus();
+    }
+  }
+
+  function bindAvatarDblClick() {
+    var avatar = $('.contact-avatar');
+    if (avatar) {
+      avatar.style.cursor = 'default';
+      avatar.addEventListener('dblclick', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        showPwdModal();
+      });
+    }
   }
 
   /* ── 服务页 ── */
@@ -300,6 +343,8 @@
         '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>' +
         (CONTACT.intro || '') +
       '</div>';
+
+    bindAvatarDblClick();
   }
 
   /* ── 初始化 ── */
@@ -310,6 +355,26 @@
     renderArticles();
     bindSearch();
     renderContact();
+
+    // 密码弹窗事件
+    var pwdBtn = $('#pwd-btn');
+    if (pwdBtn) pwdBtn.addEventListener('click', checkPassword);
+
+    var pwdInput = $('#pwd-input');
+    if (pwdInput) pwdInput.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') checkPassword();
+    });
+
+    var pwdCancel = $('#pwd-cancel');
+    if (pwdCancel) pwdCancel.addEventListener('click', hidePwdModal);
+
+    var pwdOverlay = $('#pwd-overlay');
+    if (pwdOverlay) pwdOverlay.addEventListener('click', function(e) {
+      if (e.target === pwdOverlay) hidePwdModal();
+    });
+
+    var secretBack = $('#secret-back');
+    if (secretBack) secretBack.addEventListener('click', function() { navigate('contact'); });
 
     var hash = (location.hash || '').replace('#', '') || 'home';
     showPage(ALL_PAGES.indexOf(hash) !== -1 ? hash : 'home');
