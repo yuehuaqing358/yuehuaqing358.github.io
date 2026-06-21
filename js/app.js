@@ -7,6 +7,29 @@
   var PRODUCTS = DATA.PRODUCTS || [];
   var CONTACT = DATA.CONTACT || {};
   var SECRET_PASSWORD = 'elj2026';  /* ← 改这里换密码 */
+  var SECRET_CONTENT = DATA.SECRET_CONTENT || '';
+  var isSecretUnlocked = false;
+
+  /* GitHub API 配置（用于保存隐藏页面内容） */
+  var GITHUB_REPO = 'yuehuaqing358/yuehuaqing358.github.io';
+  var GITHUB_BRANCH = 'main';
+  var GITHUB_DATA_JS_PATH = 'js/data.js';
+
+  function getGitHubToken() {
+    return localStorage.getItem('gh_token') || '';
+  }
+  function setGitHubToken(t) {
+    if (t) localStorage.setItem('gh_token', t);
+    else localStorage.removeItem('gh_token');
+  }
+
+  /* 安全 base64 编解码（支持中文） */
+  function utf8_to_b64(str) {
+    return btoa(unescape(encodeURIComponent(str)));
+  }
+  function b64_to_utf8(str) {
+    return decodeURIComponent(escape(atob(str)));
+  }
 
   function $(s, c) { return (c || document).querySelector(s); }
   function $$(s, c) { return Array.prototype.slice.call((c || document).querySelectorAll(s)); }
@@ -72,6 +95,8 @@
       a.classList.toggle('active', a.getAttribute('data-page') === name);
     });
 
+    if (name === 'secret') renderSecret();
+
     currentPage = name;
     window.scrollTo(0, 0);
   }
@@ -128,6 +153,7 @@
     var input = $('#pwd-input');
     if (!input) return;
     if (input.value === SECRET_PASSWORD) {
+      isSecretUnlocked = true;
       hidePwdModal();
       navigate('secret');
     } else {
@@ -138,6 +164,76 @@
     }
   }
 
+  /* ── 隐藏页面 ── */
+  function renderSecret() {
+    var container = $('#secret-content');
+    if (!container) return;
+    container.innerHTML = parseMarkdown(SECRET_CONTENT);
+    var editBtn = $('#secret-edit-btn');
+    if (editBtn) editBtn.style.display = isSecretUnlocked ? '' : 'none';
+  }
+
+  function editSecret() {
+    var container = $('#secret-content');
+    if (!container) return;
+    var html = SECRET_CONTENT.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    container.innerHTML =
+      '<textarea id="secret-editor" style="width:100%;height:60vh;padding:12px;border:1.5px solid var(--primary);border-radius:10px;font-size:14px;line-height:1.8;resize:vertical;outline:none;font-family:var(--font)">' + html + '</textarea>' +
+      '<div style="margin-top:12px;display:flex;gap:8px;justify-content:center">' +
+        '<button id="secret-save-btn" class="pwd-btn" style="width:auto;padding:10px 28px;margin:0">保存</button>' +
+        '<button id="secret-cancel-btn" class="pwd-cancel" style="margin:0">取消</button>' +
+      '</div>';
+    $('#secret-save-btn').addEventListener('click', saveSecret);
+    $('#secret-cancel-btn').addEventListener('click', renderSecret);
+  }
+
+  function saveSecret() {
+    var token = getGitHubToken();
+    if (!token) {
+      token = prompt('请输入 GitHub Token（仅保存在本浏览器，不会上传）：');
+      if (!token) return;
+      setGitHubToken(token);
+      token = getGitHubToken();
+    }
+    var editor = $('#secret-editor');
+    if (!editor) return;
+    var newContent = editor.value;
+    var saveBtn = $('#secret-save-btn');
+    if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = '保存中…'; }
+    fetch('https://api.github.com/repos/' + GITHUB_REPO + '/contents/' + GITHUB_DATA_JS_PATH, {
+      headers: { 'Authorization': 'token ' + token, 'User-Agent': 'Mozilla/5.0' }
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      if (!data.content) throw new Error('无法读取 data.js');
+      var sha = data.sha;
+      var jsContent = b64_to_utf8(data.content);
+      var lines = jsContent.split('\n');
+      var startIdx = -1, endIdx = -1;
+      for (var i = 0; i < lines.length; i++) {
+        if (lines[i].indexOf('/* SECRET_CONTENT_START */') !== -1) startIdx = i;
+        if (startIdx !== -1 && lines[i].indexOf('/* SECRET_CONTENT_END */') !== -1) { endIdx = i; break; }
+      }
+      if (startIdx === -1 || endIdx === -1) throw new Error('data.js 格式错误：找不到标记');
+      var escaped = newContent.replace(/\\/g,'\\\\').replace(/`/g,'\\`').replace(/\${/g,'\\${');
+      lines = lines.slice(0, startIdx + 1).concat(['const SECRET_CONTENT = `' + escaped + '`;'], lines.slice(endIdx));
+      var newJs = lines.join('\n');
+      return fetch('https://api.github.com/repos/' + GITHUB_REPO + '/contents/' + GITHUB_DATA_JS_PATH, {
+        method: 'PUT',
+        headers: { 'Authorization': 'token ' + token, 'Content-Type': 'application/json', 'User-Agent': 'Mozilla/5.0' },
+        body: JSON.stringify({ message: '更新隐藏页面内容', content: utf8_to_b64(newJs), sha: sha, branch: GITHUB_BRANCH })
+      });
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      if (data.commit) { SECRET_CONTENT = newContent; renderSecret(); alert('保存成功！'); }
+      else throw new Error(data.message || '保存失败');
+    })
+    .catch(function(err){ console.error(err); alert('保存失败：' + (err.message || '请重试')); })
+    .finally(function(){ var b = $('#secret-save-btn'); if (b) { b.disabled = false; b.textContent = '保存'; } });
+  }
+
+  /* 双击头像绑定已在 renderContact 中处理 */
   function bindAvatarDblClick() {
     var avatar = $('.contact-avatar');
     if (avatar) {
@@ -375,6 +471,10 @@
 
     var secretBack = $('#secret-back');
     if (secretBack) secretBack.addEventListener('click', function() { navigate('contact'); });
+
+    // 隐藏页面编辑按钮
+    var editBtn = $('#secret-edit-btn');
+    if (editBtn) editBtn.addEventListener('click', editSecret);
 
     var hash = (location.hash || '').replace('#', '') || 'home';
     showPage(ALL_PAGES.indexOf(hash) !== -1 ? hash : 'home');
