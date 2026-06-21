@@ -141,38 +141,29 @@ a:hover { text-decoration: underline; }
   margin-bottom: 0;
 }
 
-/* ── Hero 分点列表 ── */
-.hero-points {
+/* ── Hero 标签 ── */
+.hero-tags {
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  align-items: flex-start;
+  gap: 12px;
+  align-items: center;
   margin: 1.5rem auto 0;
   max-width: 460px;
   width: 100%;
 }
 
-.hero-point {
-  display: flex;
-  align-items: center;
+.hero-tag {
+  display: block;
   font-size: 14px;
   color: var(--text);
+  background: var(--white);
+  border: 1px solid var(--border);
+  padding: 12px 20px;
+  border-radius: 12px;
   line-height: 1.5;
   text-align: left;
-}
-
-.hero-point .point-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--primary);
-  flex-shrink: 0;
-  margin-right: 10px;
-}
-
-.hero-point .point-emoji {
-  margin-right: 8px;
-  font-size: 15px;
+  width: 100%;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
 }
 
 /* ── 首页入口卡片 ── */
