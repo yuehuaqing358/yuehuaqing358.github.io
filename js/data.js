@@ -160,10 +160,7 @@ const CONTACT = {
 };
 
 /* SECRET_CONTENT_START */
-const SECRET_CONTENT = `这里是隐藏内容，只有输入密码才能看到。
-
-你可以点击页面上的「编辑」按钮，修改这里的内容。
-修改完成后点击「保存」，内容会自动更新到网站。`;
+const SECRET_CONTENT = `高天原的秘密基地`;
 /* SECRET_CONTENT_END */
 
 window.BLOG_DATA = { POSTS, ABOUT, PRODUCTS, CONTACT, SECRET_CONTENT };
