@@ -178,23 +178,39 @@
     if (!container) return;
     var html = SECRET_CONTENT.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
     container.innerHTML =
-      '<textarea id="secret-editor" style="width:100%;height:60vh;padding:12px;border:1.5px solid var(--primary);border-radius:10px;font-size:14px;line-height:1.8;resize:vertical;outline:none;font-family:var(--font)">' + html + '</textarea>' +
-      '<div style="margin-top:12px;display:flex;gap:8px;justify-content:center">' +
-        '<button id="secret-save-btn" class="pwd-btn" style="width:auto;padding:10px 28px;margin:0">保存</button>' +
-        '<button id="secret-cancel-btn" class="pwd-cancel" style="margin:0">取消</button>' +
+      '<textarea id="secret-editor" placeholder="在这里写你的内容，支持换行和段落…">' + html + '</textarea>' +
+      '<div class="secret-edit-actions">' +
+        '<button class="secret-cancel-btn" id="secret-cancel-btn">取消</button>' +
+        '<button class="secret-save-btn" id="secret-save-btn">保存</button>' +
       '</div>';
     $('#secret-save-btn').addEventListener('click', saveSecret);
     $('#secret-cancel-btn').addEventListener('click', renderSecret);
+    var editor = $('#secret-editor');
+    if (editor) editor.focus();
+  }
+
+  function showTokenModal() {
+    var overlay = $('#token-overlay');
+    if (!overlay) return;
+    overlay.classList.add('show');
+    var input = $('#token-input');
+    if (input) { input.value = ''; input.focus(); }
+    var err = $('#token-error');
+    if (err) err.classList.remove('show');
+  }
+
+  function hideTokenModal() {
+    var overlay = $('#token-overlay');
+    if (overlay) overlay.classList.remove('show');
   }
 
   function saveSecret() {
     var token = getGitHubToken();
-    if (!token) {
-      token = prompt('请输入 GitHub Token（仅保存在本浏览器，不会上传）：');
-      if (!token) return;
-      setGitHubToken(token);
-      token = getGitHubToken();
-    }
+    if (!token) { showTokenModal(); return; }
+    doSaveSecret(token);
+  }
+
+  function doSaveSecret(token) {
     var editor = $('#secret-editor');
     if (!editor) return;
     var newContent = editor.value;
@@ -475,6 +491,35 @@
     // 隐藏页面编辑按钮
     var editBtn = $('#secret-edit-btn');
     if (editBtn) editBtn.addEventListener('click', editSecret);
+
+    // Token 弹窗事件
+    var tokenBtn = $('#token-btn');
+    if (tokenBtn) tokenBtn.addEventListener('click', function() {
+      var input = $('#token-input');
+      var token = input ? input.value.trim() : '';
+      var err = $('#token-error');
+      if (!token.startsWith('ghp_')) {
+        if (err) err.classList.add('show');
+        return;
+      }
+      if (err) err.classList.remove('show');
+      setGitHubToken(token);
+      hideTokenModal();
+      doSaveSecret(token);
+    });
+
+    var tokenInput = $('#token-input');
+    if (tokenInput) tokenInput.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') { e.preventDefault(); $('#token-btn').click(); }
+    });
+
+    var tokenCancel = $('#token-cancel');
+    if (tokenCancel) tokenCancel.addEventListener('click', hideTokenModal);
+
+    var tokenOverlay = $('#token-overlay');
+    if (tokenOverlay) tokenOverlay.addEventListener('click', function(e) {
+      if (e.target === tokenOverlay) hideTokenModal();
+    });
 
     var hash = (location.hash || '').replace('#', '') || 'home';
     showPage(ALL_PAGES.indexOf(hash) !== -1 ? hash : 'home');
