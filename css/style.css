@@ -146,8 +146,10 @@ a:hover { text-decoration: underline; }
   display: flex;
   flex-direction: column;
   gap: 14px;
-  align-items: center;
-  margin-top: 1rem;
+  align-items: flex-start;
+  margin: 1.5rem auto 0;
+  max-width: 460px;
+  width: 100%;
 }
 
 .hero-point {
