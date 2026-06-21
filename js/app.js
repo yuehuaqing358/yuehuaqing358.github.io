@@ -9,26 +9,8 @@
   var SECRET_PASSWORD = 'elj2026';  /* ← 改这里换密码 */
   var isSecretUnlocked = false;
 
-  /* GitHub API 配置（用于便签功能） */
-  var GITHUB_REPO = 'yuehuaqing358/yuehuaqing358.github.io';
-  var GITHUB_BRANCH = 'main';
-  var GITHUB_NOTES_PATH = 'secret-notes';
-
-  function getGitHubToken() {
-    return localStorage.getItem('gh_token') || '';
-  }
-  function setGitHubToken(t) {
-    if (t) localStorage.setItem('gh_token', t);
-    else localStorage.removeItem('gh_token');
-  }
-
-  /* 安全 base64 编解码（支持中文） */
-  function utf8_to_b64(str) {
-    return btoa(unescape(encodeURIComponent(str)));
-  }
-  function b64_to_utf8(str) {
-    return decodeURIComponent(escape(atob(str)));
-  }
+  /* Vercel API 基础地址（便签后端，Token 存在云端）*/
+  var API_BASE = 'https://earendeljing-api.vercel.app/api/notes';
 
   function $(s, c) { return (c || document).querySelector(s); }
   function $$(s, c) { return Array.prototype.slice.call((c || document).querySelectorAll(s)); }
@@ -129,7 +111,6 @@
         navigate(homeServicesCard.getAttribute('data-page'));
       });
     }
-
   }
 
   /* ── 密码弹窗 ── */
@@ -164,32 +145,21 @@
   }
 
   /* ══ 专属空间·便签本 ══ */
-  var currentNoteId = null;   /* 当前正在编辑的便签文件名（不含路径）*/
-  var notesList = [];        /* 缓存的便签列表 */
+  var currentNoteId = null;
+  var notesList = [];
 
-  /* 加载便签列表 */
+  /* 加载便签列表（调用 Vercel API，无需 Token）*/
   function loadNotes() {
     if (!isSecretUnlocked) return;
     showNoteList();
 
-    fetch('https://api.github.com/repos/' + GITHUB_REPO + '/contents/' + GITHUB_NOTES_PATH, {
-      headers: { 'User-Agent': 'Mozilla/5.0' }
-    })
-    .then(function(r) {
-      if (r.status === 404) return [];
-      return r.json();
-    })
-    .then(function(data) {
-      if (!Array.isArray(data)) {
-        notesList = [];
-      } else {
-        notesList = data.filter(function(f) { return f.name.endsWith('.md'); }).map(function(f) {
-          return { id: f.name.replace(/\.md$/, ''), name: f.name, sha: f.sha, url: f.html_url };
-        });
-      }
-      renderNotesList();
-    })
-    .catch(function() { notesList = []; renderNotesList(); });
+    fetch(API_BASE)
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        notesList = Array.isArray(data) ? data : [];
+        renderNotesList();
+      })
+      .catch(function() { notesList = []; renderNotesList(); });
   }
 
   /* 渲染便签列表 */
@@ -198,63 +168,37 @@
     var empty = $('#notes-empty');
     if (!grid) return;
 
-    /* 保留「新建」卡片，清空其余 */
-    var addCard = $('#note-add-btn');
     grid.innerHTML = '';
-    if (addCard) grid.appendChild(addCard);
 
     if (notesList.length === 0) {
       if (empty) empty.classList.add('show');
     } else {
       if (empty) empty.classList.remove('show');
-      /* 按文件名倒序（新的在前）*/
-      notesList.slice().sort(function(a, b) { return b.id.localeCompare(a.id); }).forEach(function(note) {
+      notesList.forEach(function(note) {
         var card = document.createElement('div');
         card.className = 'note-card';
         card.setAttribute('data-note-id', note.id);
 
-        var ts = note.id.replace('note-', '');
-        var d = new Date(parseInt(ts, 10));
+        var d = new Date(parseInt(note.id.replace('note-', ''), 10));
         var dateStr = d.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' });
 
         card.innerHTML =
-          '<div class="note-card-title">未命名便签</div>' +
-          '<div class="note-card-preview"></div>' +
+          '<div class="note-card-title">' + (note.title || '未命名便签') + '</div>' +
+          '<div class="note-card-preview">' + (note.preview || '') + '</div>' +
           '<div class="note-card-date">' + dateStr + '</div>';
 
         card.addEventListener('click', function() { openNote(note.id); });
         grid.appendChild(card);
-
-        /* 异步读取标题和预览 */
-        loadNoteMeta(note.id, card);
       });
     }
-  }
 
-  /* 异步读取便签的标题和预览文本 */
-  function loadNoteMeta(noteId, card) {
-    fetch('https://api.github.com/repos/' + GITHUB_REPO + '/contents/' + GITHUB_NOTES_PATH + '/' + noteId + '.md', {
-      headers: { 'User-Agent': 'Mozilla/5.0' }
-    })
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-      if (!data.content) return;
-      var raw = b64_to_utf8(data.content);
-      var match = raw.match(/^---\s*\n([\s\S]*?)\n---(?:\n|$)([\s\S]*)$/);
-      var title = '';
-      var content = raw;
-      if (match) {
-        var fm = match[1];
-        var fmMatch = fm.match(/^title:\s*(.+)$/m);
-        if (fmMatch) title = fmMatch[1].trim();
-        content = match[2];
-      }
-      var tEl = card.querySelector('.note-card-title');
-      var pEl = card.querySelector('.note-card-preview');
-      if (tEl) tEl.textContent = title || '未命名便签';
-      if (pEl) pEl.textContent = content.trim().split('\n')[0] || '';
-    })
-    .catch(function() {});
+    /* 重新加入「新建」虚线卡片 */
+    var addCard = document.createElement('div');
+    addCard.className = 'note-card note-card--add';
+    addCard.id = 'note-add-btn';
+    addCard.innerHTML = '<div class="note-card-add-icon">＋</div><div>新建便签</div>';
+    addCard.addEventListener('click', function(e) { e.stopPropagation(); createNote(); });
+    grid.appendChild(addCard);
   }
 
   /* 显示列表视图 */
@@ -273,42 +217,30 @@
     if (editEl) editEl.style.display = '';
   }
 
-  /* 打开便签（读取内容）*/
+  /* 打开便签（调用 Vercel API 读取内容）*/
   function openNote(noteId) {
     currentNoteId = noteId;
     showNoteEdit();
     var titleInput = $('#note-title-input');
     var contentInput = $('#note-content-input');
     var dateEl = $('#note-edit-date');
-    if (titleInput) titleInput.value = '';
+    if (titleInput) titleInput.value = '加载中…';
     if (contentInput) contentInput.value = '加载中…';
 
     var ts = noteId.replace('note-', '');
     var d = new Date(parseInt(ts, 10));
     if (dateEl) dateEl.textContent = '创建于 ' + d.toLocaleString('zh-CN', { year:'numeric', month:'long', day:'numeric', hour:'2-digit', minute:'2-digit' });
 
-    fetch('https://api.github.com/repos/' + GITHUB_REPO + '/contents/' + GITHUB_NOTES_PATH + '/' + noteId + '.md', {
-      headers: { 'User-Agent': 'Mozilla/5.0' }
-    })
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-      if (!data.content) return;
-      var raw = b64_to_utf8(data.content);
-      var match = raw.match(/^---\s*\n([\s\S]*?)\n---(?:\n|$)([\s\S]*)$/);
-      var title = '';
-      var content = raw;
-      if (match) {
-        var fm = match[1];
-        var fmMatch = fm.match(/^title:\s*(.+)$/m);
-        if (fmMatch) title = fmMatch[1].trim();
-        content = match[2];
-      }
-      if (titleInput) titleInput.value = title;
-      if (contentInput) contentInput.value = content;
-    })
-    .catch(function() {
-      if (contentInput) contentInput.value = '';
-    });
+    fetch(API_BASE + '/' + noteId)
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (titleInput) titleInput.value = data.title || '';
+        if (contentInput) contentInput.value = data.content || '';
+      })
+      .catch(function() {
+        if (titleInput) titleInput.value = '';
+        if (contentInput) contentInput.value = '';
+      });
   }
 
   /* 新建便签 */
@@ -323,14 +255,8 @@
     if (dateEl) dateEl.textContent = '新建便签';
   }
 
-  /* 保存便签 */
+  /* 保存便签（调用 Vercel API，无需 Token）*/
   function saveNote() {
-    var token = getGitHubToken();
-    if (!token) { showTokenModal(); return; }
-    doSaveNote(token);
-  }
-
-  function doSaveNote(token) {
     var titleInput = $('#note-title-input');
     var contentInput = $('#note-content-input');
     if (!contentInput) return;
@@ -339,100 +265,61 @@
     var saveBtn = $('#note-save-btn');
     if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = '保存中…'; }
 
-    var fileName, fileContent;
-    fileName = (currentNoteId || ('note-' + Date.now())) + '.md';
-    fileContent = '---\ntitle: ' + title + '\ncreated: ' + new Date().toISOString() + '\n---\n\n' + content;
+    var fileName = (currentNoteId || ('note-' + Date.now())) + '.md';
+    var fileContent = '# ' + title + '\n\n' + content;
 
-    function finishSave() {
-      if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '保存'; }
-      alert('保存成功！');
-      loadNotes();
-    }
+    var payload = { filename: fileName, content: fileContent };
+    if (currentNoteId) payload.sha = getCurrentNoteSha(currentNoteId);
 
-    function handleErr(err) {
-      if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '保存'; }
-      alert('保存失败：' + (err && err.message ? err.message : '请重试'));
-    }
-
-    if (currentNoteId) {
-      /* 更新已有便签：先获取 SHA */
-      fetch('https://api.github.com/repos/' + GITHUB_REPO + '/contents/' + GITHUB_NOTES_PATH + '/' + fileName, {
-        headers: { 'Authorization': 'token ' + token, 'User-Agent': 'Mozilla/5.0' }
-      })
+    fetch(API_BASE, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    })
       .then(function(r) { return r.json(); })
       .then(function(data) {
-        return fetch('https://api.github.com/repos/' + GITHUB_REPO + '/contents/' + GITHUB_NOTES_PATH + '/' + fileName, {
-          method: 'PUT',
-          headers: { 'Authorization': 'token ' + token, 'Content-Type': 'application/json', 'User-Agent': 'Mozilla/5.0' },
-          body: JSON.stringify({ message: '更新便签', content: utf8_to_b64(fileContent), sha: data.sha, branch: GITHUB_BRANCH })
-        });
+        if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '保存'; }
+        if (data.ok) {
+          alert('保存成功！');
+          if (!currentNoteId) currentNoteId = fileName.replace(/\.md$/, '');
+          loadNotes();
+        } else throw new Error(data.error || '保存失败');
       })
-      .then(function(r) { return r.json(); })
-      .then(function(data) {
-        if (data.commit) finishSave();
-        else throw new Error(data.message || '保存失败');
-      })
-      .catch(handleErr);
-    } else {
-      /* 新建便签 */
-      currentNoteId = fileName.replace(/\.md$/, '');
-      fetch('https://api.github.com/repos/' + GITHUB_REPO + '/contents/' + GITHUB_NOTES_PATH + '/' + fileName, {
-        method: 'PUT',
-        headers: { 'Authorization': 'token ' + token, 'Content-Type': 'application/json', 'User-Agent': 'Mozilla/5.0' },
-        body: JSON.stringify({ message: '新建便签', content: utf8_to_b64(fileContent), branch: GITHUB_BRANCH })
-      })
-      .then(function(r) { return r.json(); })
-      .then(function(data) {
-        if (data.content) finishSave();
-        else throw new Error(data.message || '保存失败');
-      })
-      .catch(handleErr);
-    }
+      .catch(function(err) {
+        if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '保存'; }
+        alert('保存失败：' + (err.message || '请重试'));
+      });
   }
 
-  /* 删除便签 */
+  /* 获取当前便签的 sha（用于更新）*/
+  function getCurrentNoteSha(noteId) {
+    var note = notesList.filter(function(n) { return n.id === noteId; })[0];
+    return note ? note.sha : null;
+  }
+
+  /* 删除便签（调用 Vercel API，无需 Token）*/
   function deleteNote() {
     if (!currentNoteId) return;
     if (!confirm('确定要删除这个便签吗？删除后无法恢复。')) return;
-    var token = getGitHubToken();
-    if (!token) { showTokenModal(); return; }
 
     var fileName = currentNoteId + '.md';
-    fetch('https://api.github.com/repos/' + GITHUB_REPO + '/contents/' + GITHUB_NOTES_PATH + '/' + fileName, {
-      headers: { 'Authorization': 'token ' + token, 'User-Agent': 'Mozilla/5.0' }
-    })
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-      return fetch('https://api.github.com/repos/' + GITHUB_REPO + '/contents/' + GITHUB_NOTES_PATH + '/' + fileName, {
-        method: 'DELETE',
-        headers: { 'Authorization': 'token ' + token, 'Content-Type': 'application/json', 'User-Agent': 'Mozilla/5.0' },
-        body: JSON.stringify({ message: '删除便签', sha: data.sha, branch: GITHUB_BRANCH })
-      });
-    })
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-      if (data.commit) {
-        alert('删除成功！');
-        currentNoteId = null;
-        loadNotes();
-      } else throw new Error(data.message || '删除失败');
-    })
-    .catch(function(err) { alert('删除失败：' + (err.message || '请重试')); });
-  }
+    var sha = getCurrentNoteSha(currentNoteId);
+    if (!sha) { alert('删除失败：找不到文件信息'); return; }
 
-  /* Token 弹窗 */
-  function showTokenModal() {
-    var overlay = $('#token-overlay');
-    if (!overlay) return;
-    overlay.classList.add('show');
-    var input = $('#token-input');
-    if (input) { input.value = ''; input.focus(); }
-    var err = $('#token-error');
-    if (err) err.classList.remove('show');
-  }
-  function hideTokenModal() {
-    var overlay = $('#token-overlay');
-    if (overlay) overlay.classList.remove('show');
+    fetch(API_BASE, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ filename: fileName, sha: sha })
+    })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.ok) {
+          alert('删除成功！');
+          currentNoteId = null;
+          loadNotes();
+        } else throw new Error(data.error || '删除失败');
+      })
+      .catch(function(err) { alert('删除失败：' + (err.message || '请重试')); });
   }
 
   /* 双击头像绑定 */
@@ -629,7 +516,7 @@
       '</div>' +
       '<div class="contact-cards">' +
         '<div class="contact-card">' +
-          '<span class="contact-card-icon wechat-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M8.691 2.188C3.891 2.188 0 5.476 0 9.53c0 2.212 1.17 4.203 3.002 5.55a.59.59 0 0 1 .213.665l-.39 1.48c-.019.07-.048.141-.048.213 0 .163.13.295.29.295a.326.326 0 0 0 .167-.054l1.903-1.114a.864.864 0 0 1 .717-.098 10.16 10.16 0 0 0 2.837.403c.276 0 .543-.027.811-.05-.857-2.578.157-4.972 1.932-6.446 1.703-1.415 3.882-1.98 5.853-1.838-.576-3.583-4.196-6.348-8.596-6.348zM5.785 5.991c.642 0 1.162.529 1.162 1.18a1.17 1.17 0 0 1-1.162 1.178A1.17 1.17 0 0 1 4.623 7.17c0-.651.52-1.18 1.162-1.18zm5.813 0c.642 0 1.162.529 1.162 1.18a1.17 1.17 0 0 1-1.162 1.178 1.17 1.17 0 0 1-1.162-1.178c0-.651.52-1.18 1.162-1.18zm5.34 2.867c-1.797-.052-3.746.512-5.28 1.786-1.72 1.428-2.687 3.72-1.78 6.22.942 2.453 3.666 4.229 6.884 4.229.826 0 1.622-.12 2.361-.336a.722.722 0 0 1 .598.082l1.584.926a.272.272 0 0 0 .14.047c.134 0 .24-.111.24-.247 0-.06-.023-.12-.038-.177l-.327-1.233a.582.582 0 0 1-.023-.156.49.49 0 0 1 .201-.398C23.024 18.48 24 16.82 24 14.98c0-3.21-2.931-5.952-7.062-6.122zm-2.18 2.769c.535 0 .969.44.969.982a.976.976 0 0 1-.969.983.976.976 0 0 1-.969-.983c0-.542.434-.982.97-.982zm4.844 0c.535 0 .969.44.969.982a.976.976 0 0 1-.969.983.976.976 0 0 1-.969-.983c0-.542.434-.982.97-.982z"/></svg></span>' +
+          '<span class="contact-card-icon wechat-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M8.691 2.188C3.891 2.188 0 5.476 0 9.53c0 2.212 1.17 4.203 3.002 5.55a.59.59 0 0 1 .213.665l-.39 1.48c-.019.07-.048.141-.048.213 0 .163.13.295.29.295a.326.326 0 0 0 .167-.054l1.903-1.114a.864.864 0 0 1 .717-.098 10.16 10.16 0 0 0 2.837.403c.276 0 .543-.027.811-.05-.857-2.578.157-4.972 1.932-6.446 1.703-1.415 3.882-1.98 5.853-1.838-.576-3.583-4.196-6.348-8.596-6.348zM5.785 5.991c.642 0 1.162.529 1.162 1.18a1.17 1.17 0 0 1-1.162 1.178A1.17 1.17 0 0 1 4.623 7.17c0-.651.52-1.18 1.162-1.18zm5.813 0c.642 0 1.162.529 1.162 1.18a1.17 1.17 0 0 1-1.162 1.178 1.17 1.17 0 0 1-1.162-1.178c0-.651.434-.982.97-.982zm5.34 2.867c-1.797-.052-3.746.512-5.28 1.786-1.72 1.428-2.687 3.72-1.78 6.22.942 2.453 3.666 4.229 6.884 4.229.826 0 1.622-.12 2.361-.336a.722.722 0 0 1 .598.082l1.584.926a.272.272 0 0 0 .14.047c.134 0 .24-.111.24-.247 0-.06-.023-.12-.038-.177l-.327-1.233a.582.582 0 0 1-.023-.156.49.49 0 0 1 .201-.398C23.024 18.48 24 16.82 24 14.98c0-3.21-2.931-5.952-7.062-6.122zm-2.18 2.769c.535 0 .969.44.969.982a.976.976 0 0 1-.969.983.976.976 0 0 1-.969-.983c0-.542.434-.982.97-.982zm4.844 0c.535 0 .969.44.969.982a.976.976 0 0 1-.969.983.976.976 0 0 1-.969-.983c0-.542.434-.982.97-.982z"/></svg></span>' +
           '<div class="contact-card-body"><span class="contact-card-label">微信</span><span class="contact-card-value">' + (CONTACT.wechat || '') + '</span></div>' +
         '</div>' +
         '<div class="contact-card">' +
@@ -694,36 +581,6 @@
     if (noteEditBack) noteEditBack.addEventListener('click', function() {
       currentNoteId = null;
       loadNotes();
-    });
-
-    /* Token 弹窗事件 */
-    var tokenBtn = $('#token-btn');
-    if (tokenBtn) tokenBtn.addEventListener('click', function() {
-      var input = $('#token-input');
-      var token = input ? input.value.trim() : '';
-      var err = $('#token-error');
-      if (!token.startsWith('ghp_')) {
-        if (err) err.classList.add('show');
-        return;
-      }
-      if (err) err.classList.remove('show');
-      setGitHubToken(token);
-      hideTokenModal();
-      /* 继续刚才未完成的保存 */
-      doSaveNote(token);
-    });
-
-    var tokenInput = $('#token-input');
-    if (tokenInput) tokenInput.addEventListener('keydown', function(e) {
-      if (e.key === 'Enter') { e.preventDefault(); $('#token-btn').click(); }
-    });
-
-    var tokenCancel = $('#token-cancel');
-    if (tokenCancel) tokenCancel.addEventListener('click', hideTokenModal);
-
-    var tokenOverlay = $('#token-overlay');
-    if (tokenOverlay) tokenOverlay.addEventListener('click', function(e) {
-      if (e.target === tokenOverlay) hideTokenModal();
     });
 
     var hash = (location.hash || '').replace('#', '') || 'home';
