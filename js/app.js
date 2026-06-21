@@ -97,12 +97,6 @@
       });
     });
 
-    $$('.nav-card').forEach(function(card) {
-      card.addEventListener('click', function(e) {
-        e.preventDefault();
-        navigate(card.getAttribute('data-page'));
-      });
-    });
   }
 
   /* ── 服务页 ── */
@@ -256,20 +250,14 @@
   function renderContact() {
     var container = $('#contact-full');
     if (!container) return;
-    var tags = getAllTags();
 
     var bioHtml = ABOUT.bio ? ABOUT.bio.split('\n\n').map(function(p) { return '<p>' + p + '</p>'; }).join('') : '';
-    var skillsHtml = (ABOUT.skills || []).map(function(s) { return '<span class="skill-tag">' + s + '</span>'; }).join('');
 
     container.innerHTML =
       '<div class="contact-bio-card">' +
         '<div class="contact-avatar">' + (ABOUT.name || 'E')[0] + '</div>' +
         '<div class="contact-name">' + (ABOUT.name || '') + '</div>' +
         '<div class="contact-role">' + (ABOUT.title || '') + '</div>' +
-        '<div class="contact-stats">' +
-          '<div class="stat-item"><div class="stat-num">' + POSTS.length + '</div><div class="stat-label">篇文章</div></div>' +
-          '<div class="stat-item"><div class="stat-num">' + Object.keys(tags).length + '</div><div class="stat-label">个标签</div></div>' +
-        '</div>' +
         '<div class="contact-bio-text">' + bioHtml + '</div>' +
       '</div>' +
       '<div class="contact-cards">' +
@@ -282,7 +270,6 @@
           '<div class="contact-card-body"><span class="contact-card-label">公众号</span><span class="contact-card-value">' + (CONTACT.official_account || '') + '</span></div>' +
         '</div>' +
       '</div>' +
-      (skillsHtml ? '<div class="contact-skills"><div class="contact-skills-title">擅长领域</div><div class="skill-tags">' + skillsHtml + '</div></div>' : '') +
       '<div class="contact-note">' +
         '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>' +
         (CONTACT.intro || '') +
