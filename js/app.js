@@ -5,12 +5,11 @@
   const $ = (sel, ctx = document) => ctx.querySelector(sel);
   const $$ = (sel, ctx = document) => [...ctx.querySelectorAll(sel)];
 
-  // Safe markdown parser — never crashes even if CDN is blocked
+  // Safe markdown parser
   function parseMarkdown(md) {
     if (typeof marked !== 'undefined' && marked.parse) {
       try { return marked.parse(md.trim()); } catch (e) {}
     }
-    // Plain-text fallback
     return md.trim()
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
       .split('\n\n').map(block => {
@@ -60,28 +59,34 @@
   /* ── Router ── */
   let currentPage = 'home';
 
-  // 有效页面列表（已移除 articles 导航项，但保留内部跳转）
-  const VALID_PAGES = ['home', 'articles', 'tags', 'about', 'service', 'article'];
+  // 主导航页面 + 内部页面
+  const NAV_PAGES = ['home', 'services', 'articles', 'contact'];
+  const VALID_PAGES = [...NAV_PAGES, 'article', 'service'];
 
   function showPage(name) {
     $$('.page').forEach(p => p.classList.remove('active'));
     const el = $(`#page-${name}`);
     if (el) el.classList.add('active');
-    $$('nav a').forEach(a => {
+
+    // 更新底部导航高亮（内部页不高亮）
+    $$('.bottom-nav-item').forEach(a => {
       a.classList.toggle('active', a.dataset.page === name);
     });
+
     currentPage = name;
     window.scrollTo(0, 0);
   }
 
   function navigate(name) {
-    history.pushState({ page: name }, '', `#${name}`);
+    if (NAV_PAGES.includes(name)) {
+      history.pushState({ page: name }, '', `#${name}`);
+    }
     showPage(name);
   }
 
   window.addEventListener('popstate', e => {
     const page = (e.state && e.state.page) || 'home';
-    showPage(page);
+    showPage(VALID_PAGES.includes(page) ? page : 'home');
   });
 
   /* ── Home page ── */
@@ -93,18 +98,17 @@
     $('#hero-tags').innerHTML = topTags.map(t => renderTag(t)).join('');
     $('#recent-posts').innerHTML = recent.length
       ? recent.map(renderPostCard).join('')
-      : `<div class="empty" style="padding:2rem 0;font-size:14px;color:var(--text-muted)">暂无文章，敬请期待…</div>`;
+      : `<div class="empty" style="padding:2rem 0">暂无文章，敬请期待…</div>`;
 
-    // Products → clickable cards
+    // 服务预览卡片
     $('#home-products').innerHTML = PRODUCTS.map(p => `
       <div class="product-card" data-service="${p.id}">
         <h4>${p.name}</h4>
         <p>${p.desc}</p>
-        <span style="font-size:12px;color:var(--primary);margin-top:0.5rem;display:inline-block">了解详情 →</span>
+        <span class="card-link">了解详情 →</span>
       </div>
     `).join('');
 
-    // Bind product card clicks via event delegation
     $('#home-products').addEventListener('click', (e) => {
       const card = e.target.closest('.product-card');
       if (card) {
@@ -113,60 +117,47 @@
       }
     });
 
-    // 联系我 — 全新排版，含个人介绍
-    const bioShort = ABOUT.bio.split('\n\n')[0]; // 取第一段作为简介
+    // 联系预览（精简版）
+    const bioShort = ABOUT.bio.split('\n\n')[0];
     $('#home-contact').innerHTML = `
-      <div class="contact-section">
-
-        <!-- 个人介绍卡 -->
-        <div class="contact-bio-block">
-          <div class="contact-bio-avatar">${ABOUT.name[0]}</div>
-          <div class="contact-bio-text">
-            <div class="contact-bio-name">${ABOUT.name}</div>
-            <div class="contact-bio-role">${ABOUT.title}</div>
-            <div class="contact-bio-desc">${bioShort}</div>
-          </div>
+      <div class="contact-bio-card" style="margin-bottom:0;padding:1.5rem 1.5rem">
+        <div class="contact-avatar" style="width:56px;height:56px;font-size:1.5rem">${ABOUT.name[0]}</div>
+        <div class="contact-name" style="font-size:17px">${ABOUT.name}</div>
+        <div class="contact-role">${ABOUT.title}</div>
+        <div class="contact-bio-text" style="border-top:none;padding-top:0;margin-top:0.5rem;font-size:13px">
+          ${bioShort}
         </div>
-
-        <!-- 联系方式卡片 -->
-        <div class="contact-cards">
-          <div class="contact-card">
-            <span class="contact-card-icon wechat-icon">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M8.691 2.188C3.891 2.188 0 5.476 0 9.53c0 2.212 1.17 4.203 3.002 5.55a.59.59 0 0 1 .213.665l-.39 1.48c-.019.07-.048.141-.048.213 0 .163.13.295.29.295a.326.326 0 0 0 .167-.054l1.903-1.114a.864.864 0 0 1 .717-.098 10.16 10.16 0 0 0 2.837.403c.276 0 .543-.027.811-.05-.857-2.578.157-4.972 1.932-6.446 1.703-1.415 3.882-1.98 5.853-1.838-.576-3.583-4.196-6.348-8.596-6.348zM5.785 5.991c.642 0 1.162.529 1.162 1.18a1.17 1.17 0 0 1-1.162 1.178A1.17 1.17 0 0 1 4.623 7.17c0-.651.52-1.18 1.162-1.18zm5.813 0c.642 0 1.162.529 1.162 1.18a1.17 1.17 0 0 1-1.162 1.178 1.17 1.17 0 0 1-1.162-1.178c0-.651.52-1.18 1.162-1.18zm5.34 2.867c-1.797-.052-3.746.512-5.28 1.786-1.72 1.428-2.687 3.72-1.78 6.22.942 2.453 3.666 4.229 6.884 4.229.826 0 1.622-.12 2.361-.336a.722.722 0 0 1 .598.082l1.584.926a.272.272 0 0 0 .14.047c.134 0 .24-.111.24-.247 0-.06-.023-.12-.038-.177l-.327-1.233a.582.582 0 0 1-.023-.156.49.49 0 0 1 .201-.398C23.024 18.48 24 16.82 24 14.98c0-3.21-2.931-5.952-7.062-6.122zm-2.18 2.769c.535 0 .969.44.969.982a.976.976 0 0 1-.969.983.976.976 0 0 1-.969-.983c0-.542.434-.982.97-.982zm4.844 0c.535 0 .969.44.969.982a.976.976 0 0 1-.969.983.976.976 0 0 1-.969-.983c0-.542.434-.982.97-.982z"/></svg>
-            </span>
-            <div class="contact-card-body">
-              <span class="contact-card-label">微信</span>
-              <span class="contact-card-value">${CONTACT.wechat}</span>
-            </div>
-          </div>
-          <div class="contact-card">
-            <span class="contact-card-icon oa-icon">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12h8M12 8l4 4-4 4"/></svg>
-            </span>
-            <div class="contact-card-body">
-              <span class="contact-card-label">公众号</span>
-              <span class="contact-card-value">${CONTACT.official_account}</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- 备注提示 -->
-        <div class="contact-note">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-          ${CONTACT.intro}
-        </div>
-
       </div>
     `;
 
-    // Tag click on hero → tags page
+    // Tag click → articles page
     $$('.tag', $('#hero-tags')).forEach(el => {
       el.addEventListener('click', () => {
-        navigate('tags');
+        navigate('articles');
         filterByTag(el.dataset.tag);
       });
     });
     if (recent.length) bindPostCards($('#recent-posts'));
+
+    // 查看全部按钮
+    $('#btn-all-services').addEventListener('click', () => navigate('services'));
+    $('#btn-all-posts').addEventListener('click', () => navigate('articles'));
+    $('#btn-contact').addEventListener('click', () => navigate('contact'));
+  }
+
+  /* ── Services page ── */
+  function renderServicesPage() {
+    $('#services-list').innerHTML = PRODUCTS.map(p => `
+      <div class="service-card" data-service="${p.id}">
+        <h4>${p.name}</h4>
+        <p class="service-desc">${p.desc}</p>
+        <span class="service-link">了解详情 →</span>
+      </div>
+    `).join('');
+
+    $$('#services-list .service-card').forEach(card => {
+      card.addEventListener('click', () => openService(card.dataset.service));
+    });
   }
 
   /* ── Articles page ── */
@@ -184,8 +175,7 @@
     container.innerHTML = filtered.map(renderPostCard).join('');
     bindPostCards(container);
 
-    // Update filter chips
-    const chips = $$('.filter-chip');
+    const chips = $$('#filter-chips .tag');
     chips.forEach(c => c.classList.toggle('active', c.dataset.tag === filterTag));
     if (!filterTag) chips.forEach(c => c.classList.remove('active'));
   }
@@ -196,7 +186,6 @@
         const tagEl = e.target.closest('.tag');
         if (tagEl) {
           e.stopPropagation();
-          navigate('articles');
           renderArticles(tagEl.dataset.tag);
           return;
         }
@@ -206,7 +195,6 @@
     $$('.tag', container).forEach(tag => {
       tag.addEventListener('click', e => {
         e.stopPropagation();
-        navigate('articles');
         renderArticles(tag.dataset.tag);
       });
     });
@@ -217,13 +205,12 @@
     const sorted = Object.entries(tags).sort((a, b) => b[1] - a[1]);
     const wrap = $('#filter-chips');
     wrap.innerHTML = `<span class="tag" data-tag="">全部</span>` +
-      sorted.map(([t]) => `<span class="filter-chip tag" data-tag="${t}">${t}</span>`).join('');
+      sorted.map(([t]) => `<span class="tag" data-tag="${t}">${t}</span>`).join('');
     $$('.tag', wrap).forEach(el => {
       el.addEventListener('click', () => renderArticles(el.dataset.tag || null));
     });
   }
 
-  // Search
   function bindSearch() {
     const inp = $('#search-input');
     if (!inp) return;
@@ -267,7 +254,11 @@
       <div class="md-content">${html}</div>
     `;
 
-    $('#btn-back').addEventListener('click', () => history.back());
+    $('#btn-back').addEventListener('click', () => {
+      history.back();
+      // fallback if no history
+      setTimeout(() => { if (currentPage === 'article') navigate('articles'); }, 100);
+    });
     $$('.tag', $('#article-container')).forEach(el => {
       el.addEventListener('click', () => {
         navigate('articles');
@@ -286,14 +277,17 @@
     const html = parseMarkdown(service.content);
 
     $('#service-container').innerHTML = `
-      <button class="back-btn" id="btn-service-back">← 返回首页</button>
+      <button class="back-btn" id="btn-service-back">← 返回</button>
       <div class="article-header">
         <h1 class="article-title">${service.name}</h1>
       </div>
       <div class="md-content">${html}</div>
     `;
 
-    $('#btn-service-back').addEventListener('click', () => navigate('home'));
+    $('#btn-service-back').addEventListener('click', () => {
+      history.back();
+      setTimeout(() => { if (currentPage === 'service') navigate('services'); }, 100);
+    });
 
     navigate('service');
   }
@@ -318,67 +312,89 @@
     return `<ul>${items}</ul>`;
   }
 
-  /* ── Tags page ── */
-  function renderTagsPage() {
+  /* ── Contact page ── */
+  function renderContact() {
     const tags = getAllTags();
-    const sorted = Object.entries(tags).sort((a, b) => b[1] - a[1]);
-    if (sorted.length === 0) {
-      $('#tags-grid').innerHTML = `<div class="empty" style="grid-column:1/-1;padding:2rem 0">暂无标签</div>`;
-      return;
-    }
-    $('#tags-grid').innerHTML = sorted.map(([tag, count]) => `
-      <div class="tag-card" data-tag="${tag}">
-        <div class="tag-card-name"># ${tag}</div>
-        <div class="tag-card-count">${count} 篇文章</div>
-      </div>`).join('');
-    $$('.tag-card').forEach(card => {
-      card.addEventListener('click', () => {
-        navigate('articles');
-        renderArticles(card.dataset.tag);
-      });
-    });
+
+    $('#contact-full').innerHTML = `
+      <!-- 个人介绍卡 -->
+      <div class="contact-bio-card">
+        <div class="contact-avatar">${ABOUT.name[0]}</div>
+        <div class="contact-name">${ABOUT.name}</div>
+        <div class="contact-role">${ABOUT.title}</div>
+        <div class="contact-stats">
+          <div class="stat-item">
+            <div class="stat-num">${POSTS.length}</div>
+            <div class="stat-label">篇文章</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-num">${Object.keys(tags).length}</div>
+            <div class="stat-label">个标签</div>
+          </div>
+        </div>
+        <div class="contact-bio-text">
+          ${ABOUT.bio.split('\n\n').map(p => `<p>${p}</p>`).join('')}
+        </div>
+      </div>
+
+      <!-- 联系方式卡片 -->
+      <div class="contact-cards">
+        <div class="contact-card">
+          <span class="contact-card-icon wechat-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M8.691 2.188C3.891 2.188 0 5.476 0 9.53c0 2.212 1.17 4.203 3.002 5.55a.59.59 0 0 1 .213.665l-.39 1.48c-.019.07-.048.141-.048.213 0 .163.13.295.29.295a.326.326 0 0 0 .167-.054l1.903-1.114a.864.864 0 0 1 .717-.098 10.16 10.16 0 0 0 2.837.403c.276 0 .543-.027.811-.05-.857-2.578.157-4.972 1.932-6.446 1.703-1.415 3.882-1.98 5.853-1.838-.576-3.583-4.196-6.348-8.596-6.348zM5.785 5.991c.642 0 1.162.529 1.162 1.18a1.17 1.17 0 0 1-1.162 1.178A1.17 1.17 0 0 1 4.623 7.17c0-.651.52-1.18 1.162-1.18zm5.813 0c.642 0 1.162.529 1.162 1.18a1.17 1.17 0 0 1-1.162 1.178 1.17 1.17 0 0 1-1.162-1.178c0-.651.52-1.18 1.162-1.18zm5.34 2.867c-1.797-.052-3.746.512-5.28 1.786-1.72 1.428-2.687 3.72-1.78 6.22.942 2.453 3.666 4.229 6.884 4.229.826 0 1.622-.12 2.361-.336a.722.722 0 0 1 .598.082l1.584.926a.272.272 0 0 0 .14.047c.134 0 .24-.111.24-.247 0-.06-.023-.12-.038-.177l-.327-1.233a.582.582 0 0 1-.023-.156.49.49 0 0 1 .201-.398C23.024 18.48 24 16.82 24 14.98c0-3.21-2.931-5.952-7.062-6.122zm-2.18 2.769c.535 0 .969.44.969.982a.976.976 0 0 1-.969.983.976.976 0 0 1-.969-.983c0-.542.434-.982.97-.982zm4.844 0c.535 0 .969.44.969.982a.976.976 0 0 1-.969.983.976.976 0 0 1-.969-.983c0-.542.434-.982.97-.982z"/></svg>
+          </span>
+          <div class="contact-card-body">
+            <span class="contact-card-label">微信</span>
+            <span class="contact-card-value">${CONTACT.wechat}</span>
+          </div>
+        </div>
+        <div class="contact-card">
+          <span class="contact-card-icon oa-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12h8M12 8l4 4-4 4"/></svg>
+          </span>
+          <div class="contact-card-body">
+            <span class="contact-card-label">公众号</span>
+            <span class="contact-card-value">${CONTACT.official_account}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 擅长领域 -->
+      <div class="contact-skills">
+        <div class="contact-skills-title">擅长领域</div>
+        <div class="skill-tags">
+          ${ABOUT.skills.map(s => `<span class="skill-tag">${s}</span>`).join('')}
+        </div>
+      </div>
+
+      <!-- 备注提示 -->
+      <div class="contact-note" style="margin-top:1.5rem">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        ${CONTACT.intro}
+      </div>
+    `;
   }
 
   function filterByTag(tag) {
     renderArticles(tag);
   }
 
-  /* ── About page ── */
-  function renderAbout() {
-    const tags = getAllTags();
-
-    $('#about-avatar').textContent = ABOUT.name[0];
-    $('#about-name').textContent = ABOUT.name;
-    $('#about-title').textContent = ABOUT.title;
-    $('#about-post-count').textContent = POSTS.length;
-    $('#about-tag-count').textContent = Object.keys(tags).length;
-
-    $('#about-bio').innerHTML = ABOUT.bio.split('\n\n').map(p => `<p>${p}</p>`).join('');
-    $('#about-skills').innerHTML = ABOUT.skills.map(s => `<span class="skill-tag">${s}</span>`).join('');
-    if (ABOUT.social && ABOUT.social.wechat) {
-      $('#about-wechat-id').textContent = ABOUT.social.wechat;
-    }
-  }
-
   /* ── Nav & Init ── */
   function init() {
-    // Nav clicks
-    $$('nav a').forEach(a => {
+    // 底部导航点击
+    $$('.bottom-nav-item').forEach(a => {
       a.addEventListener('click', e => {
         e.preventDefault();
         navigate(a.dataset.page);
       });
     });
 
-    // Home CTA
-    $('#btn-all-posts').addEventListener('click', () => navigate('articles'));
-
     renderHome();
+    renderServicesPage();
     buildFilterChips();
     renderArticles();
     bindSearch();
-    renderTagsPage();
-    renderAbout();
+    renderContact();
 
     // Initial route
     const hash = location.hash.replace('#', '') || 'home';
