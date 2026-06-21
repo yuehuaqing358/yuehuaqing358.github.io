@@ -10,51 +10,53 @@
 </head>
 <body>
 
-<!-- ── Main ── -->
 <main class="main-content">
 
-  <!-- ═══════ 首页 ═══════ -->
+  <!-- ══ 首页 ══ -->
   <section id="page-home" class="page active">
-    <!-- Hero -->
     <div class="hero">
       <div class="hero-badge">行动觉醒教练 · 生命DNA解读师</div>
       <h1>我是 Earendel鏡</h1>
       <p class="hero-subtitle">我陪伴你从「知道」走到「做到」<br>照见你与生俱来的光</p>
-      <div class="hero-tags" id="hero-tags"></div>
     </div>
 
-    <!-- 服务预览 -->
-    <div class="section-block">
-      <div class="section-block-header">
-        <h2 class="section-block-title">服务体系</h2>
-        <a class="view-all" id="btn-all-services" href="#services" onclick="return false;">全部服务 →</a>
-      </div>
-      <div class="gradient-line"></div>
-      <div class="product-grid" id="home-products"></div>
-    </div>
+    <div class="nav-cards">
+      <a class="nav-card" data-page="services">
+        <div class="nav-card-icon" style="background:linear-gradient(135deg,#eff6ff,#dbeafe);color:#2563eb">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        </div>
+        <div class="nav-card-body">
+          <h3>服务</h3>
+          <p>1v1 教练对话 · 7天体验 · 21天计划</p>
+        </div>
+        <span class="nav-card-arrow">→</span>
+      </a>
 
-    <!-- 文章预览 -->
-    <div class="section-block">
-      <div class="section-block-header">
-        <h2 class="section-block-title">文章博客</h2>
-        <a class="view-all" id="btn-all-posts" href="#articles" onclick="return false;">查看全部 →</a>
-      </div>
-      <div class="gradient-line"></div>
-      <div class="post-grid" id="recent-posts"></div>
-    </div>
+      <a class="nav-card" data-page="articles">
+        <div class="nav-card-icon" style="background:linear-gradient(135deg,#ecfdf5,#d1fae5);color:#059669">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="14" y2="17"/></svg>
+        </div>
+        <div class="nav-card-body">
+          <h3>文章</h3>
+          <p>陪伴与解读中的真实感悟与思考</p>
+        </div>
+        <span class="nav-card-arrow">→</span>
+      </a>
 
-    <!-- 联系预览 -->
-    <div class="section-block">
-      <div class="section-block-header">
-        <h2 class="section-block-title">联系我</h2>
-        <a class="view-all" id="btn-contact" href="#contact" onclick="return false;">查看详情 →</a>
-      </div>
-      <div class="gradient-line"></div>
-      <div id="home-contact"></div>
+      <a class="nav-card" data-page="contact">
+        <div class="nav-card-icon" style="background:linear-gradient(135deg,#fef3c7,#fde68a);color:#d97706">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        </div>
+        <div class="nav-card-body">
+          <h3>联系</h3>
+          <p>微信 · 公众号 · 关于我</p>
+        </div>
+        <span class="nav-card-arrow">→</span>
+      </a>
     </div>
   </section>
 
-  <!-- ═══════ 服务页 ═══════ -->
+  <!-- ══ 服务页 ══ -->
   <section id="page-services" class="page">
     <div class="page-header">
       <h2 class="page-title">服务</h2>
@@ -64,19 +66,19 @@
     <div class="service-list" id="services-list"></div>
   </section>
 
-  <!-- ═══════ 文章页 ═══════ -->
+  <!-- ══ 文章页 ══ -->
   <section id="page-articles" class="page">
     <div class="page-header">
       <h2 class="page-title">文章</h2>
       <p class="page-desc">陪伴与解读中的真实感悟、方法框架和个人思考</p>
     </div>
     <div class="gradient-line"></div>
-    <input class="search-bar" id="search-input" type="text" placeholder="搜索文章标题、内容或标签…">
+    <input class="search-bar" id="search-input" type="text" placeholder="搜索文章…">
     <div class="filter-chips" id="filter-chips"></div>
     <div class="post-grid" id="all-posts"></div>
   </section>
 
-  <!-- ═══════ 联系页 ═══════ -->
+  <!-- ══ 联系页 ══ -->
   <section id="page-contact" class="page">
     <div class="page-header">
       <h2 class="page-title">联系</h2>
@@ -85,33 +87,33 @@
     <div id="contact-full"></div>
   </section>
 
-  <!-- ═══════ 文章详情（内部页） ═══════ -->
+  <!-- ══ 文章详情 ══ -->
   <section id="page-article" class="page">
     <div id="article-container"></div>
   </section>
 
-  <!-- ═══════ 服务详情（内部页） ═══════ -->
+  <!-- ══ 服务详情 ══ -->
   <section id="page-service" class="page">
     <div id="service-container"></div>
   </section>
 
 </main>
 
-<!-- ── 底部导航 ── -->
+<!-- 底部导航 -->
 <nav class="bottom-nav">
-  <a href="#home" data-page="home" class="bottom-nav-item active">
+  <a data-page="home" class="bottom-nav-item active">
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
     <span>首页</span>
   </a>
-  <a href="#services" data-page="services" class="bottom-nav-item">
+  <a data-page="services" class="bottom-nav-item">
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
     <span>服务</span>
   </a>
-  <a href="#articles" data-page="articles" class="bottom-nav-item">
+  <a data-page="articles" class="bottom-nav-item">
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="14" y2="17"/></svg>
     <span>文章</span>
   </a>
-  <a href="#contact" data-page="contact" class="bottom-nav-item">
+  <a data-page="contact" class="bottom-nav-item">
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
     <span>联系</span>
   </a>
