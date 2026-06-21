@@ -104,15 +104,33 @@
     var container = $('#services-list');
     if (!container) return;
     container.innerHTML = PRODUCTS.map(function(p) {
-      return '<div class="service-card" data-service="' + p.id + '">' +
-        '<h4>' + p.name + '</h4>' +
+      var featuresHtml = (p.features || []).map(function(f) {
+        return '<li>' + f + '</li>';
+      }).join('');
+
+      return '<div class="service-card">' +
+        '<div class="service-card-header">' +
+          '<span class="service-icon">' + (p.icon || '') + '</span>' +
+          '<h4>' + p.name + '</h4>' +
+        '</div>' +
         '<p class="service-desc">' + p.desc + '</p>' +
-        '<span class="service-link">了解详情 →</span>' +
+        (featuresHtml ? '<ul class="service-features">' + featuresHtml + '</ul>' : '') +
+        '<div class="service-card-footer">' +
+          '<div class="service-price">' +
+            '<span class="price-symbol">¥</span>' +
+            '<span class="price-num">' + p.price + '</span>' +
+            '<span class="price-unit">' + p.priceUnit + '</span>' +
+          '</div>' +
+          '<a class="service-cta">' + (p.cta || '预约咨询') + ' →</a>' +
+        '</div>' +
       '</div>';
     }).join('');
 
-    $$('.service-card', container).forEach(function(card) {
-      card.addEventListener('click', function() { openService(card.getAttribute('data-service')); });
+    $$('.service-cta', container).forEach(function(btn) {
+      btn.addEventListener('click', function(e) {
+        e.preventDefault();
+        navigate('contact');
+      });
     });
   }
 
