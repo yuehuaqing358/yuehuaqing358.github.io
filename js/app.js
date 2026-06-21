@@ -97,7 +97,7 @@
       });
     });
 
-    $$('.home-service-item').forEach(function(item) {
+    $$('.home-service-row').forEach(function(item) {
       item.addEventListener('click', function(e) {
         e.preventDefault();
         navigate(item.getAttribute('data-page'));
