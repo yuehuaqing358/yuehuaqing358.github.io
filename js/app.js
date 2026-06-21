@@ -97,6 +97,13 @@
       });
     });
 
+    $$('.home-service-item').forEach(function(item) {
+      item.addEventListener('click', function(e) {
+        e.preventDefault();
+        navigate(item.getAttribute('data-page'));
+      });
+    });
+
   }
 
   /* ── 服务页 ── */
